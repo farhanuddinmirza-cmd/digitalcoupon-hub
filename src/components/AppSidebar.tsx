@@ -39,8 +39,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems
-                .filter(item => !item.permission || can(item.permission))
+              {navItems.map(item => (
                 .map(item => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
