@@ -1,4 +1,4 @@
-import { LayoutDashboard, Megaphone, Ticket, Users, Activity, LogOut } from 'lucide-react';
+import { LayoutDashboard, Megaphone, LogOut } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth-context';
@@ -18,9 +18,6 @@ import {
 const navItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
   { title: 'Campaigns', url: '/campaigns', icon: Megaphone },
-  { title: 'Coupons', url: '/coupons', icon: Ticket },
-  { title: 'Users & Access', url: '/users', icon: Users, permission: 'manage_users' },
-  { title: 'Activity Logs', url: '/activity', icon: Activity },
 ];
 
 export function AppSidebar() {
@@ -42,9 +39,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems
-                .filter(item => !item.permission || can(item.permission))
-                .map(item => (
+              {navItems.map(item => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <NavLink
