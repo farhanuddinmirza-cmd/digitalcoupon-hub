@@ -9,9 +9,6 @@ import LoginPage from '@/pages/LoginPage';
 import DashboardPage from '@/pages/DashboardPage';
 import CampaignsPage from '@/pages/CampaignsPage';
 import CampaignDetailPage from '@/pages/CampaignDetailPage';
-import CouponsPage from '@/pages/CouponsPage';
-import UsersPage from '@/pages/UsersPage';
-import ActivityLogsPage from '@/pages/ActivityLogsPage';
 import NotFound from '@/pages/NotFound';
 
 const queryClient = new QueryClient();
