@@ -1,4 +1,4 @@
-import { LayoutDashboard, Megaphone, Ticket, Users, Activity, LogOut } from 'lucide-react';
+import { LayoutDashboard, Megaphone, LogOut } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth-context';

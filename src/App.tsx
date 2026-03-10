@@ -24,9 +24,6 @@ function AppRoutes() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />
         <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
-        <Route path="/coupons" element={<CouponsPage />} />
-        <Route path="/users" element={<UsersPage />} />
-        <Route path="/activity" element={<ActivityLogsPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>
