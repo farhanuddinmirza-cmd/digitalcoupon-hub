@@ -26,6 +26,8 @@ function AppRoutes() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/campaigns" element={<CampaignsPage />} />
         <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/teams" element={<TeamManagementPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>
