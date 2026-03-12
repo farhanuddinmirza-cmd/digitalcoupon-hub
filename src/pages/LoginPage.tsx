@@ -38,7 +38,7 @@ export default function LoginPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" placeholder="any password" value={password} onChange={e => setPassword(e.target.value)} required />
+              <Input id="password" type="password" placeholder="Enter Password" value={password} onChange={e => setPassword(e.target.value)} required />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full">Sign In</Button>
