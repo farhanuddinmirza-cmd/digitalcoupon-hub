@@ -28,6 +28,18 @@ export default function UserManagementPage() {
   const { can } = useAuth();
   const isAdmin = can('manage_users');
 
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4">
+        <div className="text-4xl">🔒</div>
+        <h1 className="text-xl font-semibold text-foreground">Access Denied</h1>
+        <p className="text-muted-foreground max-w-sm">
+          Only administrators can access user management. Please contact an admin if you need to manage users.
+        </p>
+      </div>
+    );
+  }
+
   const [users, setUsers] = useState<ManagedUser[]>([...initialManagedUsers]);
   const [appFilter, setAppFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);

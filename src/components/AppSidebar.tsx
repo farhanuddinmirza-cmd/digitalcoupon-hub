@@ -31,8 +31,8 @@ export function AppSidebar() {
   const location = useLocation();
   const { user, logout, can } = useAuth();
 
-  // Admin sees full CRUD; viewer can view user list
-  const showUserManagement = can('manage_users') || can('view_metrics');
+  // Only Admin can see User Management
+  const showUserManagement = can('manage_users');
 
   return (
     <Sidebar collapsible="icon">
