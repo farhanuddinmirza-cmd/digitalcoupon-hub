@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, Download, Search } from 'lucide-react';
+import { Eye, Download, Search, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const statusColor: Record<string, string> = {
@@ -19,6 +19,7 @@ export default function CampaignsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [campaignFilter, setCampaignFilter] = useState<string>('all');
+  const [exportCampaign, setExportCampaign] = useState<string>('');
 
   const claimedCoupons = useMemo(() => {
     return mockCoupons
@@ -34,7 +35,10 @@ export default function CampaignsPage() {
   }, [search, campaignFilter]);
 
   const handleDownloadExcel = () => {
-    const rows = claimedCoupons.map(c => ({
+    if (!exportCampaign) return;
+    const campaignCoupons = mockCoupons.filter(c => c.status === 'claimed' && c.campaignId === exportCampaign);
+    const campaign = mockCampaigns.find(c => c.id === exportCampaign);
+    const rows = campaignCoupons.map(c => ({
       'Coupon Code': c.couponCode,
       'Campaign': c.campaignName,
       'Brand': c.brand,
@@ -50,17 +54,43 @@ export default function CampaignsPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Claimed Coupons');
     const today = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `coupons-claimed-${today}.xlsx`);
+    const safeName = (campaign?.name ?? 'campaign').replace(/[^a-zA-Z0-9]/g, '-');
+    XLSX.writeFile(wb, `coupons-${safeName}-${today}.xlsx`);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-bold text-foreground">Campaigns</h1>
-        <Button variant="outline" size="sm" onClick={handleDownloadExcel}>
-          <Download className="h-3.5 w-3.5 mr-1" /> Download Excel
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={exportCampaign} onValueChange={setExportCampaign}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select campaign to export" />
+            </SelectTrigger>
+            <SelectContent>
+              {mockCampaigns.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadExcel}
+            disabled={!exportCampaign}
+            title={!exportCampaign ? 'Select a campaign to export' : ''}
+          >
+            <Download className="h-3.5 w-3.5 mr-1" /> Download Excel
+          </Button>
+        </div>
       </div>
+
+      {!exportCampaign && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          Select a campaign above to export its claimed coupons as Excel.
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">

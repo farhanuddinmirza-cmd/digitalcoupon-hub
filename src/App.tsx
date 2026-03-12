@@ -10,7 +10,7 @@ import DashboardPage from '@/pages/DashboardPage';
 import CampaignsPage from '@/pages/CampaignsPage';
 import CampaignDetailPage from '@/pages/CampaignDetailPage';
 import LeaderboardPage from '@/pages/LeaderboardPage';
-import TeamManagementPage from '@/pages/TeamManagementPage';
+import UserManagementPage from '@/pages/UserManagementPage';
 import NotFound from '@/pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -27,7 +27,7 @@ function AppRoutes() {
         <Route path="/campaigns" element={<CampaignsPage />} />
         <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
-        <Route path="/teams" element={<TeamManagementPage />} />
+        <Route path="/users" element={<UserManagementPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>

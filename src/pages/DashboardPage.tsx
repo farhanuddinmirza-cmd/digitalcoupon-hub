@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Upload, Download, FileText, TrendingUp, Ticket, BarChart3 } from 'lucide-react';
+import { Upload, FileText, TrendingUp, Ticket, BarChart3 } from 'lucide-react';
 import { KpiCard } from '@/components/KpiCard';
-import { getDashboardMetrics, mockCampaigns, mockCoupons } from '@/lib/mock-data';
+import { getDashboardMetrics, mockCampaigns, mockCoupons, mockActivityLogs } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
@@ -18,16 +18,40 @@ export default function DashboardPage() {
 
   const metrics = useMemo(() => getDashboardMetrics(campaignFilter === 'all' ? undefined : campaignFilter), [campaignFilter]);
 
-  const barData = useMemo(() => {
-    return mockCampaigns.map(c => {
-      const coupons = mockCoupons.filter(cp => cp.campaignId === c.id);
-      return {
-        name: c.name.length > 15 ? c.name.slice(0, 15) + '…' : c.name,
-        uploaded: coupons.length,
-        claimed: coupons.filter(cp => cp.status === 'claimed').length,
-      };
-    });
-  }, []);
+  // Daily histogram data: coupons claimed + PDFs downloaded per day
+  const dailyData = useMemo(() => {
+    const dayMap: Record<string, { claimed: number; pdfDownloads: number }> = {};
+
+    // Count claimed coupons by day
+    const filteredCoupons = campaignFilter === 'all'
+      ? mockCoupons
+      : mockCoupons.filter(c => c.campaignId === campaignFilter);
+
+    filteredCoupons
+      .filter(c => c.status === 'claimed' && c.claimedAt)
+      .forEach(c => {
+        const day = c.claimedAt!.slice(0, 10); // YYYY-MM-DD
+        if (!dayMap[day]) dayMap[day] = { claimed: 0, pdfDownloads: 0 };
+        dayMap[day].claimed++;
+      });
+
+    // Count PDF downloads by day
+    const filteredLogs = campaignFilter === 'all'
+      ? mockActivityLogs
+      : mockActivityLogs.filter(a => a.campaignId === campaignFilter);
+
+    filteredLogs
+      .filter(a => a.action === 'pdf_downloaded')
+      .forEach(a => {
+        const day = a.timestamp.slice(0, 10);
+        if (!dayMap[day]) dayMap[day] = { claimed: 0, pdfDownloads: 0 };
+        dayMap[day].pdfDownloads++;
+      });
+
+    return Object.entries(dayMap)
+      .map(([date, counts]) => ({ date, ...counts }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [campaignFilter]);
 
   const pieData = [
     { name: 'Claimed', value: metrics.totalClaimed },
@@ -63,17 +87,17 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2 shadow-sm">
           <CardHeader>
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-primary" /> Coupons by Campaign
+              <BarChart3 className="h-4 w-4 text-primary" /> Daily Claims &amp; PDF Downloads
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={barData}>
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <BarChart data={dailyData}>
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={60} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Bar dataKey="uploaded" fill="hsl(215, 70%, 55%)" radius={[4, 4, 0, 0]} name="Uploaded" />
-                <Bar dataKey="claimed" fill="hsl(172, 66%, 38%)" radius={[4, 4, 0, 0]} name="Claimed" />
+                <Bar dataKey="claimed" fill="hsl(172, 66%, 38%)" radius={[4, 4, 0, 0]} name="Coupons Claimed" />
+                <Bar dataKey="pdfDownloads" fill="hsl(215, 70%, 55%)" radius={[4, 4, 0, 0]} name="PDFs Downloaded" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
