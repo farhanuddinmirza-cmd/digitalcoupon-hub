@@ -1,11 +1,11 @@
 import { User, Campaign, Coupon, ActivityLog, DashboardMetrics } from './types';
 
 export const mockUsers: User[] = [
-  { id: '1', name: 'Rahul Sharma', email: 'rahul@admin.com', role: 'admin', enabled: true, createdAt: '2024-01-10' },
-  { id: '2', name: 'Priya Patel', email: 'priya@ops.com', role: 'ops', enabled: true, createdAt: '2024-02-15' },
-  { id: '3', name: 'Amit Kumar', email: 'amit@viewer.com', role: 'viewer', enabled: true, createdAt: '2024-03-01' },
-  { id: '4', name: 'Sneha Gupta', email: 'sneha@ops.com', role: 'ops', enabled: false, createdAt: '2024-03-20' },
-  { id: '5', name: 'Vikram Singh', email: 'vikram@viewer.com', role: 'viewer', enabled: true, createdAt: '2024-04-05' },
+  { id: '1', name: 'Rahul Sharma', email: 'rahul@admin.com', password: 'admin123', role: 'admin', enabled: true, createdAt: '2024-01-10' },
+  { id: '2', name: 'Priya Patel', email: 'priya@ops.com', password: 'ops123', role: 'ops', enabled: true, createdAt: '2024-02-15' },
+  { id: '3', name: 'Amit Kumar', email: 'amit@viewer.com', password: 'viewer123', role: 'viewer', enabled: true, createdAt: '2024-03-01' },
+  { id: '4', name: 'Sneha Gupta', email: 'sneha@ops.com', password: 'ops456', role: 'ops', enabled: false, createdAt: '2024-03-20' },
+  { id: '5', name: 'Vikram Singh', email: 'vikram@viewer.com', password: 'viewer456', role: 'viewer', enabled: true, createdAt: '2024-04-05' },
 ];
 
 export const mockCampaigns: Campaign[] = [
