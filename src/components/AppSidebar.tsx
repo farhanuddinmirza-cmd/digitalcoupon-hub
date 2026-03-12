@@ -18,6 +18,11 @@ import {
 const navItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
   { title: 'Campaigns', url: '/campaigns', icon: Megaphone },
+  { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
+];
+
+const adminItems = [
+  { title: 'Team Management', url: '/teams', icon: Users },
 ];
 
 export function AppSidebar() {
