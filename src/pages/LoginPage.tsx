@@ -42,9 +42,6 @@ export default function LoginPage() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full">Sign In</Button>
-            <p className="text-xs text-muted-foreground text-center mt-3">
-              Demo: use <strong>rahul@admin.com</strong> (admin), <strong>priya@ops.com</strong> (ops), or <strong>amit@viewer.com</strong> (viewer) with any password.
-            </p>
           </form>
         </CardContent>
       </Card>
