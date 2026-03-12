@@ -14,8 +14,8 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
-  const login = (email: string, _password: string) => {
-    const found = mockUsers.find(u => u.email === email && u.enabled);
+  const login = (email: string, password: string) => {
+    const found = mockUsers.find(u => u.email === email && u.password === password && u.enabled);
     if (found) {
       setUser(found);
       return true;

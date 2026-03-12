@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { mockCampaigns, mockCoupons } from '@/lib/mock-data';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 
 interface LeaderboardEntry {
   rank: number;
@@ -9,14 +9,7 @@ interface LeaderboardEntry {
   claimRate: number;
   totalClaimed: number;
   totalUploaded: number;
-  trend: 'up' | 'down' | 'flat';
 }
-
-const trendIcon = {
-  up: <TrendingUp className="h-4 w-4 text-accent-foreground" />,
-  down: <TrendingDown className="h-4 w-4 text-destructive" />,
-  flat: <Minus className="h-4 w-4 text-muted-foreground" />,
-};
 
 const rankStyle = (rank: number) => {
   if (rank === 1) return 'bg-[hsl(45,93%,47%)/0.15] text-[hsl(45,93%,37%)] border-[hsl(45,93%,47%)/0.3]';
@@ -34,8 +27,7 @@ const rankLabel = (rank: number) => {
 
 export default function LeaderboardPage() {
   const leaderboard = useMemo<LeaderboardEntry[]>(() => {
-    const trends: Array<'up' | 'down' | 'flat'> = ['up', 'down', 'flat'];
-    const entries = mockCampaigns.map((c, idx) => {
+    const entries = mockCampaigns.map((c) => {
       const coupons = mockCoupons.filter(cp => cp.campaignId === c.id);
       const totalUploaded = coupons.length;
       const totalClaimed = coupons.filter(cp => cp.status === 'claimed').length;
@@ -46,7 +38,6 @@ export default function LeaderboardPage() {
         claimRate,
         totalClaimed,
         totalUploaded,
-        trend: trends[idx % 3],
       };
     });
 
@@ -68,23 +59,21 @@ export default function LeaderboardPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-20">Rank</TableHead>
-              <TableHead>Campaign</TableHead>
-              <TableHead className="text-right">Claim Rate</TableHead>
-              <TableHead className="text-right">Claimed / Uploaded</TableHead>
-              <TableHead className="w-16 text-center">Trend</TableHead>
+              <TableHead className="w-20 text-center">Rank</TableHead>
+              <TableHead className="text-center">Campaign</TableHead>
+              <TableHead className="text-center">Claim Rate</TableHead>
+              <TableHead className="text-center">Uploaded</TableHead>
+              <TableHead className="text-center">Claimed</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {leaderboard.map(entry => (
               <TableRow key={entry.campaignName} className={entry.rank <= 3 ? rankStyle(entry.rank) : ''}>
-                <TableCell className="font-bold text-lg">{rankLabel(entry.rank)}</TableCell>
-                <TableCell className="font-medium text-foreground">{entry.campaignName}</TableCell>
-                <TableCell className="text-right font-semibold text-foreground">{entry.claimRate}%</TableCell>
-                <TableCell className="text-right text-muted-foreground">
-                  {entry.totalClaimed} / {entry.totalUploaded}
-                </TableCell>
-                <TableCell className="text-center">{trendIcon[entry.trend]}</TableCell>
+                <TableCell className="font-bold text-lg text-center">{rankLabel(entry.rank)}</TableCell>
+                <TableCell className="font-medium text-foreground text-center">{entry.campaignName}</TableCell>
+                <TableCell className="font-semibold text-foreground text-center">{entry.claimRate}%</TableCell>
+                <TableCell className="text-muted-foreground text-center">{entry.totalUploaded}</TableCell>
+                <TableCell className="text-muted-foreground text-center">{entry.totalClaimed}</TableCell>
               </TableRow>
             ))}
             {leaderboard.length === 0 && (

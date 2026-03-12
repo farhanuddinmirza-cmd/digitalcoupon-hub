@@ -1,28 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { mockUsers } from '@/lib/mock-data';
-import { applicationIds } from '@/lib/team-data';
 import { User, UserRole } from '@/lib/types';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-
-interface ManagedUser extends User {
-  applicationId: string;
-}
-
-// Assign mock application IDs to users
-const initialManagedUsers: ManagedUser[] = mockUsers.map((u, i) => ({
-  ...u,
-  applicationId: applicationIds[i % applicationIds.length],
-}));
 
 function AccessDenied() {
   return (
@@ -37,41 +25,32 @@ function AccessDenied() {
 }
 
 function UserManagementContent() {
-  const [users, setUsers] = useState<ManagedUser[]>([...initialManagedUsers]);
-  const [appFilter, setAppFilter] = useState('all');
+  const [users, setUsers] = useState<User[]>([...mockUsers]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   // Form state
   const [formName, setFormName] = useState('');
   const [formEmail, setFormEmail] = useState('');
+  const [formPassword, setFormPassword] = useState('');
   const [formRole, setFormRole] = useState<UserRole>('viewer');
-  const [formAppId, setFormAppId] = useState(applicationIds[0]);
-  const [formEnabled, setFormEnabled] = useState(true);
-
-  const filteredUsers = useMemo(() => {
-    if (appFilter === 'all') return users;
-    return users.filter(u => u.applicationId === appFilter);
-  }, [users, appFilter]);
 
   const openCreate = () => {
     setEditingUser(null);
     setFormName('');
     setFormEmail('');
+    setFormPassword('');
     setFormRole('viewer');
-    setFormAppId(applicationIds[0]);
-    setFormEnabled(true);
     setDialogOpen(true);
   };
 
-  const openEdit = (user: ManagedUser) => {
+  const openEdit = (user: User) => {
     setEditingUser(user);
     setFormName(user.name);
     setFormEmail(user.email);
+    setFormPassword(user.password || '');
     setFormRole(user.role);
-    setFormAppId(user.applicationId);
-    setFormEnabled(user.enabled);
     setDialogOpen(true);
   };
 
@@ -79,18 +58,18 @@ function UserManagementContent() {
     if (!formName.trim() || !formEmail.trim()) return;
     if (editingUser) {
       setUsers(prev => prev.map(u => u.id === editingUser.id
-        ? { ...u, name: formName.trim(), email: formEmail.trim(), role: formRole, applicationId: formAppId, enabled: formEnabled }
+        ? { ...u, name: formName.trim(), email: formEmail.trim(), password: formPassword.trim() || undefined, role: formRole }
         : u
       ));
     } else {
-      const newUser: ManagedUser = {
+      const newUser: User = {
         id: `u${Date.now()}`,
         name: formName.trim(),
         email: formEmail.trim(),
+        password: formPassword.trim() || undefined,
         role: formRole,
-        enabled: formEnabled,
+        enabled: true,
         createdAt: new Date().toISOString().split('T')[0],
-        applicationId: formAppId,
       };
       setUsers(prev => [...prev, newUser]);
     }
@@ -102,10 +81,6 @@ function UserManagementContent() {
       setUsers(prev => prev.filter(u => u.id !== deleteId));
       setDeleteId(null);
     }
-  };
-
-  const toggleEnabled = (id: string) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, enabled: !u.enabled } : u));
   };
 
   const roleBadgeClass: Record<UserRole, string> = {
@@ -126,22 +101,6 @@ function UserManagementContent() {
         </Button>
       </div>
 
-      {/* Application ID filter */}
-      <div className="flex items-end gap-4">
-        <div className="space-y-1">
-          <Label className="text-xs">Application ID</Label>
-          <Select value={appFilter} onValueChange={setAppFilter}>
-            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Applications</SelectItem>
-              {applicationIds.map(id => (
-                <SelectItem key={id} value={id}>{id}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
       <div className="rounded-lg border bg-card">
         <Table>
           <TableHeader>
@@ -149,29 +108,22 @@ function UserManagementContent() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.map(u => (
+            {users.map(u => (
               <TableRow key={u.id}>
                 <TableCell className="font-medium text-foreground">{u.name}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
                 <TableCell>
                   <Badge className={`${roleBadgeClass[u.role]} capitalize text-xs`}>{u.role}</Badge>
                 </TableCell>
-                <TableCell>
-                  <Badge variant={u.enabled ? 'default' : 'secondary'} className="text-xs">
-                    {u.enabled ? 'Active' : 'Inactive'}
-                  </Badge>
-                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Switch checked={u.enabled} onCheckedChange={() => toggleEnabled(u.id)} />
                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(u.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -179,10 +131,10 @@ function UserManagementContent() {
                 </TableCell>
               </TableRow>
             ))}
-            {filteredUsers.length === 0 && (
+            {users.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  No users found for the selected filter.
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                  No users found.
                 </TableCell>
               </TableRow>
             )}
@@ -209,6 +161,10 @@ function UserManagementContent() {
               <Input id="user-email" type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="user@example.com" />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="user-password">Password</Label>
+              <Input id="user-password" type="password" value={formPassword} onChange={e => setFormPassword(e.target.value)} placeholder="Enter password" />
+            </div>
+            <div className="space-y-2">
               <Label>Role</Label>
               <Select value={formRole} onValueChange={v => setFormRole(v as UserRole)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -218,21 +174,6 @@ function UserManagementContent() {
                   <SelectItem value="viewer">Viewer</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Application ID</Label>
-              <Select value={formAppId} onValueChange={setFormAppId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {applicationIds.map(id => (
-                    <SelectItem key={id} value={id}>{id}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={formEnabled} onCheckedChange={setFormEnabled} />
-              <Label>{formEnabled ? 'Active' : 'Inactive'}</Label>
             </div>
           </div>
           <DialogFooter>
