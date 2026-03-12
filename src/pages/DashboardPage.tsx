@@ -46,12 +46,6 @@ export default function DashboardPage() {
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [campaignFilter]);
 
-  const pieData = [
-    { name: 'Claimed', value: metrics.totalClaimed },
-    { name: 'Uploaded', value: metrics.totalUploaded - metrics.totalClaimed - metrics.totalVoided },
-    { name: 'Voided', value: metrics.totalVoided },
-  ];
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
