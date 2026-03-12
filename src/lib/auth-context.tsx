@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { User, UserRole, hasPermission } from './types';
+import { User, hasPermission } from './types';
 import { mockUsers } from './mock-data';
 
 interface AuthContextType {
@@ -9,7 +9,12 @@ interface AuthContextType {
   can: (permission: string) => boolean;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const authGlobal = globalThis as typeof globalThis & {
+  __couponAuthContext__?: React.Context<AuthContextType | null>;
+};
+
+const AuthContext = authGlobal.__couponAuthContext__ ?? createContext<AuthContextType | null>(null);
+authGlobal.__couponAuthContext__ = AuthContext;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
