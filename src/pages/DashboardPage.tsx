@@ -4,14 +4,7 @@ import { KpiCard } from '@/components/KpiCard';
 import { getDashboardMetrics, mockCampaigns, mockCoupons, mockActivityLogs } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-
-const COLORS = [
-  'hsl(172, 66%, 38%)',
-  'hsl(215, 70%, 55%)',
-  'hsl(38, 92%, 50%)',
-  'hsl(280, 60%, 55%)',
-];
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function DashboardPage() {
   const [campaignFilter, setCampaignFilter] = useState<string>('all');
