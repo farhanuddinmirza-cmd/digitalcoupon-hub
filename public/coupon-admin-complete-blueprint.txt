@@ -1,0 +1,2109 @@
+================================================================================
+COUPON ADMIN DASHBOARD — COMPLETE PROJECT BLUEPRINT
+================================================================================
+Tech: Vite + React 18 + TypeScript + Tailwind CSS + shadcn/ui + Recharts + XLSX
+================================================================================
+
+SETUP INSTRUCTIONS:
+1. npm create vite@latest coupon-admin -- --template react-ts
+2. cd coupon-admin
+3. npx shadcn-ui@latest init (choose: New York style, slate base, CSS variables YES)
+4. Install shadcn components:
+   npx shadcn-ui@latest add button card input label select table badge switch dialog alert-dialog tabs checkbox popover separator sidebar tooltip toast sonner scroll-area accordion avatar breadcrumb calendar carousel chart collapsible command context-menu drawer dropdown-menu form hover-card input-otp menubar navigation-menu pagination progress radio-group resizable sheet skeleton slider textarea toggle toggle-group
+5. npm install react-router-dom @tanstack/react-query recharts xlsx lucide-react next-themes date-fns
+6. npm run dev
+
+========== FILE: index.html ==========
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Digital Coupons Dashboard</title>
+    <meta name="description" content="Coupon Admin Dashboard">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
+========== FILE: package.json ==========
+{
+  "name": "vite_react_shadcn_ts",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:dev": "vite build --mode development",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^3.10.0",
+    "@radix-ui/react-accordion": "^1.2.11",
+    "@radix-ui/react-alert-dialog": "^1.1.14",
+    "@radix-ui/react-aspect-ratio": "^1.1.7",
+    "@radix-ui/react-avatar": "^1.1.10",
+    "@radix-ui/react-checkbox": "^1.3.2",
+    "@radix-ui/react-collapsible": "^1.1.11",
+    "@radix-ui/react-context-menu": "^2.2.15",
+    "@radix-ui/react-dialog": "^1.1.14",
+    "@radix-ui/react-dropdown-menu": "^2.1.15",
+    "@radix-ui/react-hover-card": "^1.1.14",
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-menubar": "^1.1.15",
+    "@radix-ui/react-navigation-menu": "^1.2.13",
+    "@radix-ui/react-popover": "^1.1.14",
+    "@radix-ui/react-progress": "^1.1.7",
+    "@radix-ui/react-radio-group": "^1.3.7",
+    "@radix-ui/react-scroll-area": "^1.2.9",
+    "@radix-ui/react-select": "^2.2.5",
+    "@radix-ui/react-separator": "^1.1.7",
+    "@radix-ui/react-slider": "^1.3.5",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-switch": "^1.2.5",
+    "@radix-ui/react-tabs": "^1.1.12",
+    "@radix-ui/react-toast": "^1.2.14",
+    "@radix-ui/react-toggle": "^1.1.9",
+    "@radix-ui/react-toggle-group": "^1.1.10",
+    "@radix-ui/react-tooltip": "^1.2.7",
+    "@tanstack/react-query": "^5.83.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "date-fns": "^3.6.0",
+    "embla-carousel-react": "^8.6.0",
+    "input-otp": "^1.4.2",
+    "lucide-react": "^0.462.0",
+    "next-themes": "^0.3.0",
+    "react": "^18.3.1",
+    "react-day-picker": "^8.10.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.61.1",
+    "react-resizable-panels": "^2.1.9",
+    "react-router-dom": "^6.30.1",
+    "recharts": "^2.15.4",
+    "sonner": "^1.7.4",
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss-animate": "^1.0.7",
+    "vaul": "^0.9.9",
+    "xlsx": "^0.18.5",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.0.0",
+    "@tailwindcss/typography": "^0.5.16",
+    "@types/node": "^22.16.5",
+    "@types/react": "^18.3.23",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react-swc": "^3.11.0",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.32.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^15.15.0",
+    "jsdom": "^20.0.3",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.38.0",
+    "vite": "^5.4.19",
+    "vitest": "^3.2.4"
+  }
+}
+
+========== FILE: vite.config.ts ==========
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react-swc";
+import path from "path";
+
+export default defineConfig(({ mode }) => ({
+  server: {
+    host: "::",
+    port: 8080,
+    hmr: {
+      overlay: false,
+    },
+  },
+  plugins: [react()].filter(Boolean),
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+}));
+
+========== FILE: tailwind.config.ts ==========
+import type { Config } from "tailwindcss";
+
+export default {
+  darkMode: ["class"],
+  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  prefix: "",
+  theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          ring: "hsl(var(--sidebar-ring))",
+        },
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
+        chart: {
+          "1": "hsl(var(--chart-1))",
+          "2": "hsl(var(--chart-2))",
+          "3": "hsl(var(--chart-3))",
+          "4": "hsl(var(--chart-4))",
+          "5": "hsl(var(--chart-5))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      keyframes: {
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+} satisfies Config;
+
+========== FILE: src/index.css ==========
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 220 20% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 10%;
+
+    --primary: 172 66% 38%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 215 20% 95%;
+    --secondary-foreground: 220 20% 20%;
+
+    --muted: 215 15% 93%;
+    --muted-foreground: 215 12% 50%;
+
+    --accent: 172 50% 94%;
+    --accent-foreground: 172 66% 28%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 72% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 215 20% 90%;
+    --input: 215 20% 90%;
+    --ring: 172 66% 38%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 220 20% 10%;
+    --sidebar-foreground: 215 15% 75%;
+    --sidebar-primary: 172 66% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 18% 16%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 220 15% 18%;
+    --sidebar-ring: 172 66% 50%;
+
+    --chart-1: 172 66% 38%;
+    --chart-2: 215 70% 55%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 280 60% 55%;
+    --chart-5: 0 72% 51%;
+  }
+
+  .dark {
+    --background: 220 20% 10%;
+    --foreground: 210 20% 98%;
+    --card: 220 18% 13%;
+    --card-foreground: 210 20% 98%;
+    --popover: 220 18% 13%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 172 66% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 210 20% 90%;
+    --muted: 220 15% 18%;
+    --muted-foreground: 215 12% 55%;
+    --accent: 172 30% 18%;
+    --accent-foreground: 172 66% 60%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 172 66% 45%;
+    --sidebar-background: 220 25% 7%;
+    --sidebar-foreground: 215 15% 75%;
+    --sidebar-primary: 172 66% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 20% 12%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 220 15% 14%;
+    --sidebar-ring: 172 66% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(172 66% 48%));
+  }
+}
+
+========== FILE: src/main.tsx ==========
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import "./index.css";
+
+createRoot(document.getElementById("root")!).render(<App />);
+
+========== FILE: src/App.tsx ==========
+import { Toaster } from '@/components/ui/toaster';
+import { Toaster as Sonner } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { DashboardLayout } from '@/components/DashboardLayout';
+import LoginPage from '@/pages/LoginPage';
+import DashboardPage from '@/pages/DashboardPage';
+import CampaignsPage from '@/pages/CampaignsPage';
+import CampaignDetailPage from '@/pages/CampaignDetailPage';
+import LeaderboardPage from '@/pages/LeaderboardPage';
+import UserManagementPage from '@/pages/UserManagementPage';
+import NotFound from '@/pages/NotFound';
+
+const queryClient = new QueryClient();
+
+function AppRoutes() {
+  const { user } = useAuth();
+
+  if (!user) return <LoginPage />;
+
+  return (
+    <DashboardLayout>
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/campaigns" element={<CampaignsPage />} />
+        <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/users" element={<UserManagementPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </DashboardLayout>
+  );
+}
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <AuthProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </AuthProvider>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+
+export default App;
+
+========== FILE: src/lib/utils.ts ==========
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+========== FILE: src/lib/types.ts ==========
+export type UserRole = 'admin' | 'ops' | 'viewer';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  enabled: boolean;
+  createdAt: string;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  brand: string;
+  store: string;
+  startDate: string;
+  endDate: string;
+  status: 'active' | 'completed' | 'draft';
+}
+
+export type CouponStatus = 'uploaded' | 'claimed' | 'voided';
+
+export interface Coupon {
+  _id: string;
+  couponCode: string;
+  campaignId: string;
+  campaignName: string;
+  status: CouponStatus;
+  claimedBy: string | null;
+  claimedAt: string | null;
+  transactionId: string | null;
+  transactionDate: string | null;
+  uploadedAt: string;
+  store: string;
+  brand: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  action: 'uploaded' | 'claimed' | 'pdf_downloaded' | 'user_created' | 'role_changed';
+  description: string;
+  userId: string;
+  userName: string;
+  campaignId?: string;
+  campaignName?: string;
+  timestamp: string;
+}
+
+export interface DashboardMetrics {
+  totalUploaded: number;
+  totalClaimed: number;
+  totalVoided: number;
+  pdfDownloads: number;
+  claimRate: number;
+}
+
+export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
+  admin: ['manage_users', 'manage_roles', 'upload_coupons', 'download_files', 'view_metrics', 'download_pdf'],
+  ops: ['view_metrics', 'upload_coupons', 'download_files'],
+  viewer: ['view_metrics'],
+};
+
+export function hasPermission(role: UserRole, permission: string): boolean {
+  return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
+}
+
+========== FILE: src/lib/auth-context.tsx ==========
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { User, UserRole, hasPermission } from './types';
+import { mockUsers } from './mock-data';
+
+interface AuthContextType {
+  user: User | null;
+  login: (email: string, password: string) => boolean;
+  logout: () => void;
+  can: (permission: string) => boolean;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+
+  const login = (email: string, _password: string) => {
+    const found = mockUsers.find(u => u.email === email && u.enabled);
+    if (found) {
+      setUser(found);
+      return true;
+    }
+    return false;
+  };
+
+  const logout = () => setUser(null);
+
+  const can = (permission: string) => {
+    if (!user) return false;
+    return hasPermission(user.role, permission);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout, can }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+}
+
+========== FILE: src/lib/mock-data.ts ==========
+import { User, Campaign, Coupon, ActivityLog, DashboardMetrics } from './types';
+
+export const mockUsers: User[] = [
+  { id: '1', name: 'Rahul Sharma', email: 'rahul@admin.com', role: 'admin', enabled: true, createdAt: '2024-01-10' },
+  { id: '2', name: 'Priya Patel', email: 'priya@ops.com', role: 'ops', enabled: true, createdAt: '2024-02-15' },
+  { id: '3', name: 'Amit Kumar', email: 'amit@viewer.com', role: 'viewer', enabled: true, createdAt: '2024-03-01' },
+  { id: '4', name: 'Sneha Gupta', email: 'sneha@ops.com', role: 'ops', enabled: false, createdAt: '2024-03-20' },
+  { id: '5', name: 'Vikram Singh', email: 'vikram@viewer.com', role: 'viewer', enabled: true, createdAt: '2024-04-05' },
+];
+
+export const mockCampaigns: Campaign[] = [
+  { id: 'c1', name: 'Summer Sale 2024', brand: 'Brand A', store: 'Store Delhi', startDate: '2024-06-01', endDate: '2024-06-30', status: 'completed' },
+  { id: 'c2', name: 'Monsoon Madness', brand: 'Brand B', store: 'Store Mumbai', startDate: '2024-07-15', endDate: '2024-08-15', status: 'active' },
+  { id: 'c3', name: 'Festive Bonanza', brand: 'Brand A', store: 'Store Bangalore', startDate: '2024-10-01', endDate: '2024-11-15', status: 'active' },
+  { id: 'c4', name: 'Winter Warmth', brand: 'Brand C', store: 'Store Delhi', startDate: '2024-12-01', endDate: '2025-01-31', status: 'draft' },
+];
+
+const statuses: Array<'uploaded' | 'claimed' | 'voided'> = ['uploaded', 'claimed', 'voided'];
+
+export const mockCoupons: Coupon[] = Array.from({ length: 85 }, (_, i) => {
+  const campaign = mockCampaigns[i % mockCampaigns.length];
+  const status = statuses[i % 3];
+  return {
+    _id: `cpn_${String(i + 1).padStart(4, '0')}`,
+    couponCode: `COUP-${String(i + 1).padStart(5, '0')}`,
+    campaignId: campaign.id,
+    campaignName: campaign.name,
+    status,
+    claimedBy: status === 'claimed' ? `user${i}@example.com` : null,
+    claimedAt: status === 'claimed' ? `2024-0${(i % 9) + 1}-${String((i % 28) + 1).padStart(2, '0')}T10:30:00Z` : null,
+    transactionId: status === 'claimed' ? `TXN${String(i + 1000).padStart(8, '0')}` : null,
+    transactionDate: status === 'claimed' ? `2024-0${(i % 9) + 1}-${String((i % 28) + 1).padStart(2, '0')}` : null,
+    uploadedAt: `2024-0${(i % 6) + 1}-${String((i % 28) + 1).padStart(2, '0')}T09:00:00Z`,
+    store: campaign.store,
+    brand: campaign.brand,
+  };
+});
+
+export const mockActivityLogs: ActivityLog[] = [
+  { id: 'a1', action: 'uploaded', description: 'Uploaded 500 coupons for Summer Sale 2024', userId: '1', userName: 'Rahul Sharma', campaignId: 'c1', campaignName: 'Summer Sale 2024', timestamp: '2024-06-01T09:00:00Z' },
+  { id: 'a2', action: 'claimed', description: 'Coupon COUP-00012 claimed', userId: '3', userName: 'System', campaignId: 'c1', campaignName: 'Summer Sale 2024', timestamp: '2024-06-05T14:30:00Z' },
+  { id: 'a3', action: 'pdf_downloaded', description: 'PDF report downloaded for Monsoon Madness', userId: '2', userName: 'Priya Patel', campaignId: 'c2', campaignName: 'Monsoon Madness', timestamp: '2024-07-20T11:00:00Z' },
+  { id: 'a4', action: 'uploaded', description: 'Uploaded 300 coupons for Festive Bonanza', userId: '2', userName: 'Priya Patel', campaignId: 'c3', campaignName: 'Festive Bonanza', timestamp: '2024-10-01T08:00:00Z' },
+  { id: 'a5', action: 'user_created', description: 'User Sneha Gupta created', userId: '1', userName: 'Rahul Sharma', timestamp: '2024-03-20T10:00:00Z' },
+  { id: 'a6', action: 'role_changed', description: 'Role changed for Amit Kumar to viewer', userId: '1', userName: 'Rahul Sharma', timestamp: '2024-03-01T12:00:00Z' },
+  { id: 'a7', action: 'claimed', description: 'Coupon COUP-00045 claimed', userId: '3', userName: 'System', campaignId: 'c2', campaignName: 'Monsoon Madness', timestamp: '2024-08-02T16:45:00Z' },
+  { id: 'a8', action: 'pdf_downloaded', description: 'PDF report downloaded for Summer Sale 2024', userId: '1', userName: 'Rahul Sharma', campaignId: 'c1', campaignName: 'Summer Sale 2024', timestamp: '2024-06-30T17:00:00Z' },
+];
+
+export function getDashboardMetrics(campaignId?: string): DashboardMetrics {
+  const filtered = campaignId ? mockCoupons.filter(c => c.campaignId === campaignId) : mockCoupons;
+  const totalUploaded = filtered.length;
+  const totalClaimed = filtered.filter(c => c.status === 'claimed').length;
+  const totalVoided = filtered.filter(c => c.status === 'voided').length;
+  const pdfDownloads = mockActivityLogs.filter(a => a.action === 'pdf_downloaded' && (!campaignId || a.campaignId === campaignId)).length;
+  return {
+    totalUploaded,
+    totalClaimed,
+    totalVoided,
+    pdfDownloads,
+    claimRate: totalUploaded > 0 ? Math.round((totalClaimed / totalUploaded) * 100) : 0,
+  };
+}
+
+========== FILE: src/lib/team-data.ts ==========
+import { mockUsers } from './mock-data';
+import { User } from './types';
+
+export interface Team {
+  id: string;
+  name: string;
+  applicationId: string;
+  memberIds: string[];
+  createdAt: string;
+}
+
+export const applicationIds = ['APP-001', 'APP-002', 'APP-003', 'APP-004'];
+
+export const initialTeams: Team[] = [
+  { id: 't1', name: 'Delhi Ops', applicationId: 'APP-001', memberIds: ['1', '2'], createdAt: '2024-05-01' },
+  { id: 't2', name: 'Mumbai Sales', applicationId: 'APP-002', memberIds: ['3'], createdAt: '2024-06-15' },
+  { id: 't3', name: 'Bangalore Support', applicationId: 'APP-001', memberIds: ['4', '5'], createdAt: '2024-07-20' },
+];
+
+export function getUsersForApp(applicationId: string, allUsers: User[]): User[] {
+  return allUsers.filter(u => u.enabled);
+}
+
+export function getTeamMembers(team: Team, allUsers: User[]): User[] {
+  return allUsers.filter(u => team.memberIds.includes(u.id));
+}
+
+========== FILE: src/components/DashboardLayout.tsx ==========
+import { ReactNode } from 'react';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { AppSidebar } from './AppSidebar';
+import { useAuth } from '@/lib/auth-context';
+
+export function DashboardLayout({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-14 flex items-center border-b bg-card px-4 gap-3 shrink-0">
+            <SidebarTrigger />
+            <div className="flex-1" />
+            <div className="flex items-center gap-2 text-sm">
+              <div className="h-8 w-8 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-semibold text-xs">
+                {user?.name?.charAt(0) ?? 'U'}
+              </div>
+              <span className="hidden sm:inline text-foreground font-medium">{user?.name}</span>
+            </div>
+          </header>
+          <main className="flex-1 overflow-auto p-4 md:p-6">
+            {children}
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+========== FILE: src/components/AppSidebar.tsx ==========
+import { LayoutDashboard, Megaphone, LogOut, Users, Trophy } from 'lucide-react';
+import { NavLink } from '@/components/NavLink';
+import { useLocation } from 'react-router-dom';
+import { useAuth } from '@/lib/auth-context';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarFooter,
+  useSidebar,
+} from '@/components/ui/sidebar';
+
+const navItems = [
+  { title: 'Dashboard', url: '/', icon: LayoutDashboard },
+  { title: 'Campaigns', url: '/campaigns', icon: Megaphone },
+  { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
+];
+
+const adminItems = [
+  { title: 'User Management', url: '/users', icon: Users },
+];
+
+export function AppSidebar() {
+  const { state } = useSidebar();
+  const collapsed = state === 'collapsed';
+  const location = useLocation();
+  const { user, logout, can } = useAuth();
+
+  const showUserManagement = can('manage_users');
+
+  return (
+    <Sidebar collapsible="icon">
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            {!collapsed && (
+              <span className="text-xs font-bold tracking-wider uppercase text-sidebar-primary">
+                Coupon Admin
+              </span>
+            )}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navItems.map(item => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      end={item.url === '/'}
+                      className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-semibold"
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              {showUserManagement && adminItems.map(item => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-semibold"
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        {!collapsed && user && (
+          <div className="px-3 py-2 text-xs text-sidebar-foreground/60">
+            <p className="font-medium text-sidebar-foreground">{user.name}</p>
+            <p className="capitalize">{user.role}</p>
+          </div>
+        )}
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={logout} className="text-sidebar-foreground/60 hover:text-destructive cursor-pointer">
+              <LogOut className="h-4 w-4" />
+              {!collapsed && <span>Sign Out</span>}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
+
+========== FILE: src/components/NavLink.tsx ==========
+import { NavLink as RouterNavLink, NavLinkProps } from "react-router-dom";
+import { forwardRef } from "react";
+import { cn } from "@/lib/utils";
+
+interface NavLinkCompatProps extends Omit<NavLinkProps, "className"> {
+  className?: string;
+  activeClassName?: string;
+  pendingClassName?: string;
+}
+
+const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
+  ({ className, activeClassName, pendingClassName, to, ...props }, ref) => {
+    return (
+      <RouterNavLink
+        ref={ref}
+        to={to}
+        className={({ isActive, isPending }) =>
+          cn(className, isActive && activeClassName, isPending && pendingClassName)
+        }
+        {...props}
+      />
+    );
+  },
+);
+
+NavLink.displayName = "NavLink";
+
+export { NavLink };
+
+========== FILE: src/components/KpiCard.tsx ==========
+import { ReactNode } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+
+interface KpiCardProps {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: ReactNode;
+  trend?: { value: number; positive: boolean };
+}
+
+export function KpiCard({ title, value, subtitle, icon, trend }: KpiCardProps) {
+  return (
+    <Card className="shadow-sm hover:shadow-md transition-shadow">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</p>
+            <p className="text-2xl font-bold text-foreground">{value}</p>
+            {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+            {trend && (
+              <p className={`text-xs font-medium ${trend.positive ? 'text-[hsl(var(--success))]' : 'text-destructive'}`}>
+                {trend.positive ? '↑' : '↓'} {Math.abs(trend.value)}% vs last period
+              </p>
+            )}
+          </div>
+          <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center text-accent-foreground">
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+========== FILE: src/components/StatusBadge.tsx ==========
+import { Badge } from '@/components/ui/badge';
+import { CouponStatus } from '@/lib/types';
+
+const statusStyles: Record<CouponStatus, string> = {
+  uploaded: 'bg-secondary text-secondary-foreground',
+  claimed: 'bg-accent text-accent-foreground',
+  voided: 'bg-destructive/10 text-destructive',
+};
+
+export function StatusBadge({ status }: { status: CouponStatus }) {
+  return (
+    <Badge variant="secondary" className={`${statusStyles[status]} capitalize text-xs font-medium`}>
+      {status}
+    </Badge>
+  );
+}
+
+========== FILE: src/pages/LoginPage.tsx ==========
+import { useState } from 'react';
+import { useAuth } from '@/lib/auth-context';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Ticket } from 'lucide-react';
+
+export default function LoginPage() {
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!login(email, password)) {
+      setError('Invalid credentials or account disabled.');
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="text-center space-y-2">
+          <div className="mx-auto h-12 w-12 rounded-xl gradient-primary flex items-center justify-center">
+            <Ticket className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <CardTitle className="text-xl">Coupon Admin</CardTitle>
+          <CardDescription>Sign in to manage digital coupons</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" placeholder="rahul@admin.com" value={email} onChange={e => setEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" type="password" placeholder="Enter Password" value={password} onChange={e => setPassword(e.target.value)} required />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" className="w-full">Sign In</Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+========== FILE: src/pages/DashboardPage.tsx ==========
+import { useState, useMemo } from 'react';
+import { Upload, FileText, TrendingUp, Ticket, BarChart3 } from 'lucide-react';
+import { KpiCard } from '@/components/KpiCard';
+import { getDashboardMetrics, mockCampaigns, mockCoupons, mockActivityLogs } from '@/lib/mock-data';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+
+export default function DashboardPage() {
+  const [campaignFilter, setCampaignFilter] = useState<string>('all');
+
+  const metrics = useMemo(() => getDashboardMetrics(campaignFilter === 'all' ? undefined : campaignFilter), [campaignFilter]);
+
+  const dailyData = useMemo(() => {
+    const dayMap: Record<string, { claimed: number; pdfDownloads: number }> = {};
+
+    const filteredCoupons = campaignFilter === 'all'
+      ? mockCoupons
+      : mockCoupons.filter(c => c.campaignId === campaignFilter);
+
+    filteredCoupons
+      .filter(c => c.status === 'claimed' && c.claimedAt)
+      .forEach(c => {
+        const day = c.claimedAt!.slice(0, 10);
+        if (!dayMap[day]) dayMap[day] = { claimed: 0, pdfDownloads: 0 };
+        dayMap[day].claimed++;
+      });
+
+    const filteredLogs = campaignFilter === 'all'
+      ? mockActivityLogs
+      : mockActivityLogs.filter(a => a.campaignId === campaignFilter);
+
+    filteredLogs
+      .filter(a => a.action === 'pdf_downloaded')
+      .forEach(a => {
+        const day = a.timestamp.slice(0, 10);
+        if (!dayMap[day]) dayMap[day] = { claimed: 0, pdfDownloads: 0 };
+        dayMap[day].pdfDownloads++;
+      });
+
+    return Object.entries(dayMap)
+      .map(([date, counts]) => ({ date, ...counts }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [campaignFilter]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="All Campaigns" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Campaigns</SelectItem>
+            {mockCampaigns.map(c => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard title="Total Uploaded" value={metrics.totalUploaded} icon={<Upload className="h-5 w-5" />} trend={{ value: 12, positive: true }} />
+        <KpiCard title="Claimed" value={metrics.totalClaimed} icon={<Ticket className="h-5 w-5" />} trend={{ value: 8, positive: true }} />
+        <KpiCard title="Claim Rate" value={`${metrics.claimRate}%`} icon={<TrendingUp className="h-5 w-5" />} />
+        <KpiCard title="PDF Downloads" value={metrics.pdfDownloads} icon={<FileText className="h-5 w-5" />} />
+      </div>
+
+      <Card className="shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-primary" /> Daily Claims & PDF Downloads
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={dailyData}>
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} angle={-30} textAnchor="end" height={50} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip />
+              <Bar dataKey="claimed" fill="hsl(172, 66%, 38%)" radius={[4, 4, 0, 0]} name="Coupons Claimed" />
+              <Bar dataKey="pdfDownloads" fill="hsl(215, 70%, 55%)" radius={[4, 4, 0, 0]} name="PDFs Downloaded" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+========== FILE: src/pages/CampaignsPage.tsx ==========
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { mockCampaigns, mockCoupons } from '@/lib/mock-data';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Eye, Download, AlertCircle } from 'lucide-react';
+import * as XLSX from 'xlsx';
+
+const statusColor: Record<string, string> = {
+  active: 'bg-accent text-accent-foreground',
+  completed: 'bg-muted text-muted-foreground',
+  draft: 'bg-secondary text-secondary-foreground',
+};
+
+export default function CampaignsPage() {
+  const navigate = useNavigate();
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [exportCampaign, setExportCampaign] = useState<string>('');
+
+  const handleDownloadExcel = () => {
+    if (!exportCampaign) return;
+    const campaignCoupons = mockCoupons.filter(c => c.status === 'claimed' && c.campaignId === exportCampaign);
+    const campaign = mockCampaigns.find(c => c.id === exportCampaign);
+    const rows = campaignCoupons.map(c => ({
+      'Coupon Code': c.couponCode,
+      'Campaign': c.campaignName,
+      'Brand': c.brand,
+      'Store': c.store,
+      'Status': c.status,
+      'Claimed By': c.claimedBy ?? '',
+      'Claimed At': c.claimedAt ? new Date(c.claimedAt).toLocaleString() : '',
+      'Transaction ID': c.transactionId ?? '',
+      'Transaction Date': c.transactionDate ?? '',
+      'Uploaded At': new Date(c.uploadedAt).toLocaleString(),
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Claimed Coupons');
+    const today = new Date().toISOString().slice(0, 10);
+    const safeName = (campaign?.name ?? 'campaign').replace(/[^a-zA-Z0-9]/g, '-');
+    XLSX.writeFile(wb, `coupons-${safeName}-${today}.xlsx`);
+    setShowExportDropdown(false);
+    setExportCampaign('');
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-2xl font-bold text-foreground">Campaigns</h1>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {!showExportDropdown ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowExportDropdown(true)}
+            className="w-fit"
+          >
+            <Download className="h-3.5 w-3.5 mr-1" /> Download Excel
+          </Button>
+        ) : (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-muted/50 rounded-md p-3 w-fit">
+            <div className="flex items-center gap-2">
+              <Select value={exportCampaign} onValueChange={setExportCampaign}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select campaign to export" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockCampaigns.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleDownloadExcel}
+                disabled={!exportCampaign}
+              >
+                <Download className="h-3.5 w-3.5 mr-1" /> Download
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setShowExportDropdown(false); setExportCampaign(''); }}
+              >
+                Cancel
+              </Button>
+            </div>
+            {!exportCampaign && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                Select a campaign to export
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {mockCampaigns.map(c => {
+          const coupons = mockCoupons.filter(cp => cp.campaignId === c.id);
+          const claimed = coupons.filter(cp => cp.status === 'claimed').length;
+          const unclaimed = coupons.filter(cp => cp.status === 'uploaded').length;
+          return (
+            <Card key={c.id} className="shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/campaigns/${c.id}`)}>
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <CardTitle className="text-base">{c.name}</CardTitle>
+                  <Badge className={`${statusColor[c.status]} capitalize text-xs`}>{c.status}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">{c.brand} · {c.store}</p>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Uploaded</span>
+                  <span className="font-medium">{coupons.length}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Claimed</span>
+                  <span className="font-medium">{claimed}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Unclaimed</span>
+                  <span className="font-medium">{unclaimed}</span>
+                </div>
+                <Button variant="outline" size="sm" className="w-full mt-2" onClick={e => { e.stopPropagation(); navigate(`/campaigns/${c.id}`); }}>
+                  <Eye className="h-3.5 w-3.5 mr-1" /> View Details
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+========== FILE: src/pages/CampaignDetailPage.tsx ==========
+import { useParams, useNavigate } from 'react-router-dom';
+import { mockCampaigns, mockCoupons, mockActivityLogs, getDashboardMetrics } from '@/lib/mock-data';
+import { KpiCard } from '@/components/KpiCard';
+import { Upload, Ticket, FileText, AlertTriangle, ArrowLeft, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/lib/auth-context';
+
+export default function CampaignDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { can } = useAuth();
+  const campaign = mockCampaigns.find(c => c.id === id);
+
+  if (!campaign) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+        <AlertTriangle className="h-10 w-10 mb-2" />
+        <p>Campaign not found</p>
+        <Button variant="ghost" className="mt-2" onClick={() => navigate('/campaigns')}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to Campaigns
+        </Button>
+      </div>
+    );
+  }
+
+  const metrics = getDashboardMetrics(id);
+  const logs = mockActivityLogs.filter(a => a.campaignId === id).slice(0, 5);
+  const unclaimed = metrics.totalUploaded - metrics.totalClaimed - metrics.totalVoided;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/campaigns')}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{campaign.name}</h1>
+          <p className="text-sm text-muted-foreground">{campaign.brand} · {campaign.store}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard title="Uploaded" value={metrics.totalUploaded} icon={<Upload className="h-5 w-5" />} />
+        <KpiCard title="Claimed" value={metrics.totalClaimed} icon={<Ticket className="h-5 w-5" />} />
+        <KpiCard title="Unclaimed" value={unclaimed} icon={<AlertTriangle className="h-5 w-5" />} />
+        <KpiCard title="PDF Downloads" value={metrics.pdfDownloads} icon={<FileText className="h-5 w-5" />} />
+      </div>
+
+      {(can('download_files') || can('upload_coupons')) && (
+        <div className="flex flex-wrap gap-2">
+          {can('download_files') && (
+            <Button variant="outline" size="sm"><Download className="h-3.5 w-3.5 mr-1" /> Download Excel</Button>
+          )}
+          {can('upload_coupons') && (
+            <Button size="sm"><Upload className="h-3.5 w-3.5 mr-1" /> Upload Coupons</Button>
+          )}
+          {can('download_pdf') && (
+            <Button variant="outline" size="sm"><FileText className="h-3.5 w-3.5 mr-1" /> PDF Report</Button>
+          )}
+        </div>
+      )}
+
+      <Card className="shadow-sm">
+        <CardHeader><CardTitle className="text-sm font-semibold">Recent Activity</CardTitle></CardHeader>
+        <CardContent>
+          {logs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No recent activity for this campaign.</p>
+          ) : (
+            <div className="space-y-3">
+              {logs.map(log => (
+                <div key={log.id} className="flex items-start gap-3 text-sm">
+                  <div className="h-2 w-2 rounded-full bg-primary mt-1.5 shrink-0" />
+                  <div>
+                    <p className="text-foreground">{log.description}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(log.timestamp).toLocaleString()} · {log.userName}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+========== FILE: src/pages/LeaderboardPage.tsx ==========
+import { useMemo } from 'react';
+import { mockCampaigns, mockCoupons } from '@/lib/mock-data';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+
+interface LeaderboardEntry {
+  rank: number;
+  campaignName: string;
+  claimRate: number;
+  totalClaimed: number;
+  totalUploaded: number;
+  trend: 'up' | 'down' | 'flat';
+}
+
+const trendIcon = {
+  up: <TrendingUp className="h-4 w-4 text-accent-foreground" />,
+  down: <TrendingDown className="h-4 w-4 text-destructive" />,
+  flat: <Minus className="h-4 w-4 text-muted-foreground" />,
+};
+
+const rankStyle = (rank: number) => {
+  if (rank === 1) return 'bg-[hsl(45,93%,47%)/0.15] text-[hsl(45,93%,37%)] border-[hsl(45,93%,47%)/0.3]';
+  if (rank === 2) return 'bg-[hsl(0,0%,70%)/0.15] text-[hsl(0,0%,45%)] border-[hsl(0,0%,70%)/0.3]';
+  if (rank === 3) return 'bg-[hsl(25,60%,50%)/0.15] text-[hsl(25,60%,35%)] border-[hsl(25,60%,50%)/0.3]';
+  return '';
+};
+
+const rankLabel = (rank: number) => {
+  if (rank === 1) return '🥇';
+  if (rank === 2) return '🥈';
+  if (rank === 3) return '🥉';
+  return `#${rank}`;
+};
+
+export default function LeaderboardPage() {
+  const leaderboard = useMemo<LeaderboardEntry[]>(() => {
+    const trends: Array<'up' | 'down' | 'flat'> = ['up', 'down', 'flat'];
+    const entries = mockCampaigns.map((c, idx) => {
+      const coupons = mockCoupons.filter(cp => cp.campaignId === c.id);
+      const totalUploaded = coupons.length;
+      const totalClaimed = coupons.filter(cp => cp.status === 'claimed').length;
+      const claimRate = totalUploaded > 0 ? Math.round((totalClaimed / totalUploaded) * 100) : 0;
+      return {
+        rank: 0,
+        campaignName: c.name,
+        claimRate,
+        totalClaimed,
+        totalUploaded,
+        trend: trends[idx % 3],
+      };
+    });
+
+    entries.sort((a, b) => b.claimRate - a.claimRate || b.totalClaimed - a.totalClaimed);
+    return entries.map((e, i) => ({ ...e, rank: i + 1 }));
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <Trophy className="h-6 w-6 text-primary" />
+          Campaign Leaderboard
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">Rankings based on claim rate performance</p>
+      </div>
+
+      <div className="rounded-lg border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-20">Rank</TableHead>
+              <TableHead>Campaign</TableHead>
+              <TableHead className="text-right">Claim Rate</TableHead>
+              <TableHead className="text-right">Claimed / Uploaded</TableHead>
+              <TableHead className="w-16 text-center">Trend</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {leaderboard.map(entry => (
+              <TableRow key={entry.campaignName} className={entry.rank <= 3 ? rankStyle(entry.rank) : ''}>
+                <TableCell className="font-bold text-lg">{rankLabel(entry.rank)}</TableCell>
+                <TableCell className="font-medium text-foreground">{entry.campaignName}</TableCell>
+                <TableCell className="text-right font-semibold text-foreground">{entry.claimRate}%</TableCell>
+                <TableCell className="text-right text-muted-foreground">
+                  {entry.totalClaimed} / {entry.totalUploaded}
+                </TableCell>
+                <TableCell className="text-center">{trendIcon[entry.trend]}</TableCell>
+              </TableRow>
+            ))}
+            {leaderboard.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  No campaigns found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+========== FILE: src/pages/UserManagementPage.tsx ==========
+import { useState, useMemo } from 'react';
+import { useAuth } from '@/lib/auth-context';
+import { mockUsers } from '@/lib/mock-data';
+import { applicationIds } from '@/lib/team-data';
+import { User, UserRole } from '@/lib/types';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
+
+interface ManagedUser extends User {
+  applicationId: string;
+}
+
+const initialManagedUsers: ManagedUser[] = mockUsers.map((u, i) => ({
+  ...u,
+  applicationId: applicationIds[i % applicationIds.length],
+}));
+
+function AccessDenied() {
+  return (
+    <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4">
+      <div className="text-4xl">🔒</div>
+      <h1 className="text-xl font-semibold text-foreground">Access Denied</h1>
+      <p className="text-muted-foreground max-w-sm">
+        Only administrators can access user management. Please contact an admin if you need to manage users.
+      </p>
+    </div>
+  );
+}
+
+function UserManagementContent() {
+  const [users, setUsers] = useState<ManagedUser[]>([...initialManagedUsers]);
+  const [appFilter, setAppFilter] = useState('all');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
+
+  const [formName, setFormName] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [formRole, setFormRole] = useState<UserRole>('viewer');
+  const [formAppId, setFormAppId] = useState(applicationIds[0]);
+  const [formEnabled, setFormEnabled] = useState(true);
+
+  const filteredUsers = useMemo(() => {
+    if (appFilter === 'all') return users;
+    return users.filter(u => u.applicationId === appFilter);
+  }, [users, appFilter]);
+
+  const openCreate = () => {
+    setEditingUser(null);
+    setFormName('');
+    setFormEmail('');
+    setFormRole('viewer');
+    setFormAppId(applicationIds[0]);
+    setFormEnabled(true);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (user: ManagedUser) => {
+    setEditingUser(user);
+    setFormName(user.name);
+    setFormEmail(user.email);
+    setFormRole(user.role);
+    setFormAppId(user.applicationId);
+    setFormEnabled(user.enabled);
+    setDialogOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!formName.trim() || !formEmail.trim()) return;
+    if (editingUser) {
+      setUsers(prev => prev.map(u => u.id === editingUser.id
+        ? { ...u, name: formName.trim(), email: formEmail.trim(), role: formRole, applicationId: formAppId, enabled: formEnabled }
+        : u
+      ));
+    } else {
+      const newUser: ManagedUser = {
+        id: `u${Date.now()}`,
+        name: formName.trim(),
+        email: formEmail.trim(),
+        role: formRole,
+        enabled: formEnabled,
+        createdAt: new Date().toISOString().split('T')[0],
+        applicationId: formAppId,
+      };
+      setUsers(prev => [...prev, newUser]);
+    }
+    setDialogOpen(false);
+  };
+
+  const handleDelete = () => {
+    if (deleteId) {
+      setUsers(prev => prev.filter(u => u.id !== deleteId));
+      setDeleteId(null);
+    }
+  };
+
+  const toggleEnabled = (id: string) => {
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, enabled: !u.enabled } : u));
+  };
+
+  const roleBadgeClass: Record<UserRole, string> = {
+    admin: 'bg-primary/10 text-primary',
+    ops: 'bg-accent text-accent-foreground',
+    viewer: 'bg-secondary text-secondary-foreground',
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage users and access control</p>
+        </div>
+        <Button onClick={openCreate} className="gap-2">
+          <Plus className="h-4 w-4" /> Create User
+        </Button>
+      </div>
+
+      <div className="flex items-end gap-4">
+        <div className="space-y-1">
+          <Label className="text-xs">Application ID</Label>
+          <Select value={appFilter} onValueChange={setAppFilter}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Applications</SelectItem>
+              {applicationIds.map(id => (
+                <SelectItem key={id} value={id}>{id}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="rounded-lg border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredUsers.map(u => (
+              <TableRow key={u.id}>
+                <TableCell className="font-medium text-foreground">{u.name}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
+                <TableCell>
+                  <Badge className={`${roleBadgeClass[u.role]} capitalize text-xs`}>{u.role}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={u.enabled ? 'default' : 'secondary'} className="text-xs">
+                    {u.enabled ? 'Active' : 'Inactive'}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Switch checked={u.enabled} onCheckedChange={() => toggleEnabled(u.id)} />
+                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(u.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            {filteredUsers.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  No users found for the selected filter.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingUser ? 'Edit User' : 'Create User'}</DialogTitle>
+            <DialogDescription>
+              {editingUser ? 'Update user details.' : 'Add a new user to the system.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="user-name">Name</Label>
+              <Input id="user-name" value={formName} onChange={e => setFormName(e.target.value)} placeholder="Full name" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="user-email">Email</Label>
+              <Input id="user-email" type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="user@example.com" />
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={formRole} onValueChange={v => setFormRole(v as UserRole)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="ops">Ops</SelectItem>
+                  <SelectItem value="viewer">Viewer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Application ID</Label>
+              <Select value={formAppId} onValueChange={setFormAppId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {applicationIds.map(id => (
+                    <SelectItem key={id} value={id}>{id}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={formEnabled} onCheckedChange={setFormEnabled} />
+              <Label>{formEnabled ? 'Active' : 'Inactive'}</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={!formName.trim() || !formEmail.trim()}>
+              {editingUser ? 'Save Changes' : 'Create User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone. The user will be permanently removed.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+export default function UserManagementPage() {
+  const { can } = useAuth();
+  const isAdmin = can('manage_users');
+
+  if (!isAdmin) {
+    return <AccessDenied />;
+  }
+
+  return <UserManagementContent />;
+}
+
+========== FILE: src/pages/TeamManagementPage.tsx ==========
+import { useState, useMemo } from 'react';
+import { useAuth } from '@/lib/auth-context';
+import { Team, initialTeams, applicationIds, getUsersForApp, getTeamMembers } from '@/lib/team-data';
+import { mockUsers } from '@/lib/mock-data';
+import { User } from '@/lib/types';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Plus, Pencil, Trash2, Users } from 'lucide-react';
+
+export default function TeamManagementPage() {
+  const { can } = useAuth();
+  const [teams, setTeams] = useState<Team[]>([...initialTeams]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+
+  const [formName, setFormName] = useState('');
+  const [formAppId, setFormAppId] = useState(applicationIds[0]);
+  const [formMembers, setFormMembers] = useState<string[]>([]);
+  const [memberFilter, setMemberFilter] = useState('');
+
+  const availableUsers = useMemo(() => getUsersForApp(formAppId, mockUsers), [formAppId]);
+  const filteredUsers = useMemo(() => {
+    if (!memberFilter) return availableUsers;
+    const q = memberFilter.toLowerCase();
+    return availableUsers.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+  }, [availableUsers, memberFilter]);
+
+  if (!can('manage_users')) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">You do not have permission to access this page.</p>
+      </div>
+    );
+  }
+
+  const openCreate = () => {
+    setEditingTeam(null);
+    setFormName('');
+    setFormAppId(applicationIds[0]);
+    setFormMembers([]);
+    setMemberFilter('');
+    setDialogOpen(true);
+  };
+
+  const openEdit = (team: Team) => {
+    setEditingTeam(team);
+    setFormName(team.name);
+    setFormAppId(team.applicationId);
+    setFormMembers([...team.memberIds]);
+    setMemberFilter('');
+    setDialogOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!formName.trim()) return;
+    if (editingTeam) {
+      setTeams(prev => prev.map(t => t.id === editingTeam.id
+        ? { ...t, name: formName.trim(), applicationId: formAppId, memberIds: formMembers }
+        : t
+      ));
+    } else {
+      const newTeam: Team = {
+        id: `t${Date.now()}`,
+        name: formName.trim(),
+        applicationId: formAppId,
+        memberIds: formMembers,
+        createdAt: new Date().toISOString().split('T')[0],
+      };
+      setTeams(prev => [...prev, newTeam]);
+    }
+    setDialogOpen(false);
+  };
+
+  const handleDelete = () => {
+    if (deleteId) {
+      setTeams(prev => prev.filter(t => t.id !== deleteId));
+      setDeleteId(null);
+    }
+  };
+
+  const toggleMember = (userId: string) => {
+    setFormMembers(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Team Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">Create and manage teams by application</p>
+        </div>
+        <Button onClick={openCreate} className="gap-2">
+          <Plus className="h-4 w-4" /> Create Team
+        </Button>
+      </div>
+
+      <div className="rounded-lg border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Team Name</TableHead>
+              <TableHead>Application ID</TableHead>
+              <TableHead>Members</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {teams.map(team => {
+              const members = getTeamMembers(team, mockUsers);
+              return (
+                <TableRow key={team.id}>
+                  <TableCell className="font-medium text-foreground">{team.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{team.applicationId}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{members.length}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(team)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(team.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {teams.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                  No teams yet. Create your first team.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingTeam ? 'Edit Team' : 'Create Team'}</DialogTitle>
+            <DialogDescription>
+              {editingTeam ? 'Update team details and members.' : 'Set up a new team and assign members.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="team-name">Team Name</Label>
+              <Input id="team-name" value={formName} onChange={e => setFormName(e.target.value)} placeholder="Enter team name" />
+            </div>
+            <div className="space-y-2">
+              <Label>Application ID</Label>
+              <Select value={formAppId} onValueChange={setFormAppId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {applicationIds.map(id => (
+                    <SelectItem key={id} value={id}>{id}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Assign Members</Label>
+              <Input placeholder="Filter users..." value={memberFilter} onChange={e => setMemberFilter(e.target.value)} className="mb-2" />
+              <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-1">
+                {filteredUsers.map(user => (
+                  <label key={user.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                    <Checkbox checked={formMembers.includes(user.id)} onCheckedChange={() => toggleMember(user.id)} />
+                    <span className="text-foreground">{user.name}</span>
+                    <span className="text-muted-foreground ml-auto text-xs">{user.role}</span>
+                  </label>
+                ))}
+                {filteredUsers.length === 0 && (
+                  <p className="text-muted-foreground text-xs text-center py-2">No users found</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={!formName.trim()}>{editingTeam ? 'Save Changes' : 'Create Team'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Team</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone. The team will be permanently removed.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+========== FILE: src/pages/CouponsPage.tsx ==========
+import { useState, useMemo } from 'react';
+import { mockCoupons, mockCampaigns } from '@/lib/mock-data';
+import { StatusBadge } from '@/components/StatusBadge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Download, Upload, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
+import { CouponStatus } from '@/lib/types';
+
+const PAGE_SIZE = 10;
+
+export default function CouponsPage() {
+  const { can } = useAuth();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [campaignFilter, setCampaignFilter] = useState<string>('all');
+  const [page, setPage] = useState(1);
+
+  const filtered = useMemo(() => {
+    return mockCoupons.filter(c => {
+      const matchesSearch = c.couponCode.toLowerCase().includes(search.toLowerCase()) ||
+        (c.claimedBy && c.claimedBy.toLowerCase().includes(search.toLowerCase())) ||
+        (c.transactionId && c.transactionId.toLowerCase().includes(search.toLowerCase()));
+      const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+      const matchesCampaign = campaignFilter === 'all' || c.campaignId === campaignFilter;
+      return matchesSearch && matchesStatus && matchesCampaign;
+    });
+  }, [search, statusFilter, campaignFilter]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-2xl font-bold text-foreground">Coupons</h1>
+        <div className="flex flex-wrap gap-2">
+          {can('download_files') && (
+            <Button variant="outline" size="sm"><Download className="h-3.5 w-3.5 mr-1" /> Export Excel</Button>
+          )}
+          {can('upload_coupons') && (
+            <Button size="sm"><Upload className="h-3.5 w-3.5 mr-1" /> Upload Coupons</Button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search code, email, txn ID…" className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+        </div>
+        <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="uploaded">Uploaded</SelectItem>
+            <SelectItem value="claimed">Claimed</SelectItem>
+            <SelectItem value="voided">Voided</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={campaignFilter} onValueChange={v => { setCampaignFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Campaign" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Campaigns</SelectItem>
+            {mockCampaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="border rounded-lg overflow-hidden bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead>Coupon Code</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Campaign</TableHead>
+              <TableHead className="hidden md:table-cell">Claimed By</TableHead>
+              <TableHead className="hidden md:table-cell">Claimed At</TableHead>
+              <TableHead className="hidden lg:table-cell">Transaction ID</TableHead>
+              <TableHead className="hidden lg:table-cell">Txn Date</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginated.length === 0 ? (
+              <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No coupons found.</TableCell></TableRow>
+            ) : paginated.map(c => (
+              <TableRow key={c._id} className="hover:bg-muted/30">
+                <TableCell className="font-mono text-sm">{c.couponCode}</TableCell>
+                <TableCell><StatusBadge status={c.status} /></TableCell>
+                <TableCell className="text-sm">{c.campaignName}</TableCell>
+                <TableCell className="hidden md:table-cell text-sm">{c.claimedBy ?? '—'}</TableCell>
+                <TableCell className="hidden md:table-cell text-sm">{c.claimedAt ? new Date(c.claimedAt).toLocaleDateString() : '—'}</TableCell>
+                <TableCell className="hidden lg:table-cell text-sm font-mono">{c.transactionId ?? '—'}</TableCell>
+                <TableCell className="hidden lg:table-cell text-sm">{c.transactionDate ?? '—'}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>{filtered.length} coupon{filtered.length !== 1 ? 's' : ''}</span>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span>Page {page} of {totalPages || 1}</span>
+          <Button variant="ghost" size="icon" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+========== FILE: src/pages/UsersPage.tsx ==========
+import { useState } from 'react';
+import { mockUsers } from '@/lib/mock-data';
+import { User, UserRole } from '@/lib/types';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { useAuth } from '@/lib/auth-context';
+
+const roleBadge: Record<UserRole, string> = {
+  admin: 'bg-primary/10 text-primary',
+  ops: 'bg-accent text-accent-foreground',
+  viewer: 'bg-secondary text-secondary-foreground',
+};
+
+export default function UsersPage() {
+  const { can } = useAuth();
+  const [users, setUsers] = useState<User[]>([...mockUsers]);
+
+  const toggleEnabled = (id: string) => {
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, enabled: !u.enabled } : u));
+  };
+
+  const changeRole = (id: string, role: UserRole) => {
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
+  };
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold text-foreground">Users & Access</h1>
+      <div className="border rounded-lg overflow-hidden bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
+              {can('manage_roles') && <TableHead>Actions</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.map(u => (
+              <TableRow key={u.id}>
+                <TableCell className="font-medium">{u.name}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
+                <TableCell>
+                  {can('manage_roles') ? (
+                    <Select value={u.role} onValueChange={(v) => changeRole(u.id, v as UserRole)}>
+                      <SelectTrigger className="w-[110px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="ops">Ops</SelectItem>
+                        <SelectItem value="viewer">Viewer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge className={`${roleBadge[u.role]} capitalize text-xs`}>{u.role}</Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={u.enabled ? 'default' : 'secondary'} className="text-xs">
+                    {u.enabled ? 'Active' : 'Disabled'}
+                  </Badge>
+                </TableCell>
+                {can('manage_roles') && (
+                  <TableCell>
+                    <Switch checked={u.enabled} onCheckedChange={() => toggleEnabled(u.id)} />
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+========== FILE: src/pages/ActivityLogsPage.tsx ==========
+import { mockActivityLogs } from '@/lib/mock-data';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Upload, Ticket, FileText, UserPlus, Shield } from 'lucide-react';
+import { ReactNode } from 'react';
+
+const actionIcons: Record<string, ReactNode> = {
+  uploaded: <Upload className="h-4 w-4" />,
+  claimed: <Ticket className="h-4 w-4" />,
+  pdf_downloaded: <FileText className="h-4 w-4" />,
+  user_created: <UserPlus className="h-4 w-4" />,
+  role_changed: <Shield className="h-4 w-4" />,
+};
+
+const actionColors: Record<string, string> = {
+  uploaded: 'bg-accent text-accent-foreground',
+  claimed: 'bg-primary/10 text-primary',
+  pdf_downloaded: 'bg-secondary text-secondary-foreground',
+  user_created: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]',
+  role_changed: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]',
+};
+
+export default function ActivityLogsPage() {
+  const sorted = [...mockActivityLogs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold text-foreground">Activity Logs</h1>
+      <div className="space-y-3">
+        {sorted.map(log => (
+          <Card key={log.id} className="shadow-sm">
+            <CardContent className="p-4 flex items-start gap-3">
+              <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${actionColors[log.action]}`}>
+                {actionIcons[log.action]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-foreground">{log.description}</p>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <span className="text-xs text-muted-foreground">{new Date(log.timestamp).toLocaleString()}</span>
+                  <span className="text-xs text-muted-foreground">·</span>
+                  <span className="text-xs text-muted-foreground">{log.userName}</span>
+                  {log.campaignName && (
+                    <Badge variant="secondary" className="text-xs">{log.campaignName}</Badge>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+========== FILE: src/pages/NotFound.tsx ==========
+import { useLocation } from "react-router-dom";
+import { useEffect } from "react";
+
+const NotFound = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
+  }, [location.pathname]);
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-muted">
+      <div className="text-center">
+        <h1 className="mb-4 text-4xl font-bold">404</h1>
+        <p className="mb-4 text-xl text-muted-foreground">Oops! Page not found</p>
+        <a href="/" className="text-primary underline hover:text-primary/90">
+          Return to Home
+        </a>
+      </div>
+    </div>
+  );
+};
+
+export default NotFound;
+
+========== FILE: src/pages/Index.tsx ==========
+const Index = () => {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="text-center">
+        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
+        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+      </div>
+    </div>
+  );
+};
+
+export default Index;
+
+========== NOTES ==========
+- Login credentials (mock): rahul@admin.com (admin), priya@ops.com (ops), amit@viewer.com (viewer)
+- Password: any non-empty string works with mock auth
+- shadcn/ui components are in src/components/ui/ — generate them via `npx shadcn-ui@latest add <component>`
+- The sidebar component (src/components/ui/sidebar.tsx) is a large shadcn component — install via shadcn CLI
+- All UI uses Tailwind semantic tokens from CSS variables defined in src/index.css
+================================================================================
