@@ -1,44 +1,45 @@
 import { useState, useMemo } from 'react';
-import { Users, Download, TrendingUp, UserCheck, BarChart3 } from 'lucide-react';
+import { Upload, FileText, TrendingUp, Ticket, BarChart3 } from 'lucide-react';
 import { KpiCard } from '@/components/KpiCard';
-import { useAnalytics } from '@/hooks/use-analytics';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useFetch } from '@/hooks/useApi';
+import { Campaign, Coupon } from '@/lib/types';
 
 export default function DashboardPage() {
-  const { data, isLoading, error } = useAnalytics();
   const [campaignFilter, setCampaignFilter] = useState<string>('all');
+  const { data: campaigns } = useFetch<Campaign[]>('/api/campaigns');
+  const { data: coupons, loading } = useFetch<Coupon[]>('/api/coupons');
+
+  const filtered = useMemo(() => {
+    if (!coupons) return [];
+    return campaignFilter === 'all'
+      ? coupons
+      : coupons.filter(c => c.campaignId === campaignFilter);
+  }, [coupons, campaignFilter]);
 
   const metrics = useMemo(() => {
-    if (!data) return null;
-    if (campaignFilter === 'all') return data.overall;
-    const c = data.breakdownByCampaign.find(b => b.campaign === campaignFilter);
-    return c ?? data.overall;
-  }, [data, campaignFilter]);
+    const totalUploaded = filtered.length;
+    const totalClaimed = filtered.filter(c => c.status === 'claimed').length;
+    const totalVoided = filtered.filter(c => c.status === 'voided').length;
+    const claimRate = totalUploaded > 0 ? Math.round((totalClaimed / totalUploaded) * 100) : 0;
+    return { totalUploaded, totalClaimed, totalVoided, claimRate };
+  }, [filtered]);
 
-  const downloadRate = useMemo(() => {
-    if (!metrics || metrics.totalLogins === 0) return 0;
-    return Math.round((metrics.totalDownloads / metrics.totalLogins) * 100);
-  }, [metrics]);
-
-  const chartData = useMemo(() => {
-    if (!data) return [];
-    return data.breakdownByCampaign.map(c => ({
-      campaign: c.campaign.length > 20 ? c.campaign.slice(0, 20) + '…' : c.campaign,
-      logins: c.totalLogins,
-      downloads: c.totalDownloads,
-    }));
-  }, [data]);
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-destructive">Failed to load analytics data. Please try again later.</p>
-      </div>
-    );
-  }
+  const dailyData = useMemo(() => {
+    const dayMap: Record<string, { claimed: number }> = {};
+    filtered
+      .filter(c => c.status === 'claimed' && c.claimedAt)
+      .forEach(c => {
+        const day = c.claimedAt!.slice(0, 10);
+        if (!dayMap[day]) dayMap[day] = { claimed: 0 };
+        dayMap[day].claimed++;
+      });
+    return Object.entries(dayMap)
+      .map(([date, counts]) => ({ date, ...counts }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [filtered]);
 
   return (
     <div className="space-y-6">
@@ -50,50 +51,43 @@ export default function DashboardPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Campaigns</SelectItem>
-            {data?.breakdownByCampaign.map(c => (
-              <SelectItem key={c.campaign} value={c.campaign}>{c.campaign}</SelectItem>
+            {(campaigns ?? []).map(c => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-lg" />
-          ))
-        ) : (
-          <>
-            <KpiCard title="Total Logins" value={metrics?.totalLogins ?? 0} icon={<Users className="h-5 w-5" />} />
-            <KpiCard title="Total Downloads" value={metrics?.totalDownloads ?? 0} icon={<Download className="h-5 w-5" />} />
-            <KpiCard title="Download Rate" value={`${downloadRate}%`} icon={<TrendingUp className="h-5 w-5" />} />
-            <KpiCard title="Unique Users Downloaded" value={metrics?.uniqueUsersDownloaded ?? 0} icon={<UserCheck className="h-5 w-5" />} />
-          </>
-        )}
-      </div>
+      {loading ? (
+        <div className="text-muted-foreground text-sm animate-pulse">Loading data...</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard title="Total Uploaded" value={metrics.totalUploaded} icon={<Upload className="h-5 w-5" />} trend={{ value: 12, positive: true }} />
+            <KpiCard title="Claimed" value={metrics.totalClaimed} icon={<Ticket className="h-5 w-5" />} trend={{ value: 8, positive: true }} />
+            <KpiCard title="Claim Rate" value={`${metrics.claimRate}%`} icon={<TrendingUp className="h-5 w-5" />} />
+            <KpiCard title="Voided" value={metrics.totalVoided} icon={<FileText className="h-5 w-5" />} />
+          </div>
 
-      <Card className="shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-primary" /> Logins vs Downloads by Campaign
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-80 w-full rounded-lg" />
-          ) : (
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={chartData}>
-                <XAxis dataKey="campaign" tick={{ fontSize: 11 }} angle={-30} textAnchor="end" height={70} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="logins" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Logins" />
-                <Bar dataKey="downloads" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="Downloads" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" /> Daily Claims
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={dailyData}>
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} angle={-30} textAnchor="end" height={50} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="claimed" fill="hsl(172, 66%, 38%)" radius={[4, 4, 0, 0]} name="Coupons Claimed" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
