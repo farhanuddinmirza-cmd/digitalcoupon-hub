@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { mockCoupons, mockCampaigns } from '@/lib/mock-data';
+import { useFetch } from '@/hooks/useApi';
+import { Campaign, Coupon } from '@/lib/types';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Download, Upload, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { CouponStatus } from '@/lib/types';
 
 const PAGE_SIZE = 10;
 
@@ -18,16 +18,23 @@ export default function CouponsPage() {
   const [campaignFilter, setCampaignFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
 
+  const { data: campaigns } = useFetch<Campaign[]>('/api/campaigns');
+  const { data: coupons, loading } = useFetch<Coupon[]>('/api/coupons');
+
+  const allCampaigns = campaigns ?? [];
+  const allCoupons = coupons ?? [];
+
   const filtered = useMemo(() => {
-    return mockCoupons.filter(c => {
-      const matchesSearch = c.couponCode.toLowerCase().includes(search.toLowerCase()) ||
+    return allCoupons.filter(c => {
+      const matchesSearch =
+        c.couponCode.toLowerCase().includes(search.toLowerCase()) ||
         (c.claimedBy && c.claimedBy.toLowerCase().includes(search.toLowerCase())) ||
         (c.transactionId && c.transactionId.toLowerCase().includes(search.toLowerCase()));
       const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
       const matchesCampaign = campaignFilter === 'all' || c.campaignId === campaignFilter;
       return matchesSearch && matchesStatus && matchesCampaign;
     });
-  }, [search, statusFilter, campaignFilter]);
+  }, [allCoupons, search, statusFilter, campaignFilter]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -49,7 +56,12 @@ export default function CouponsPage() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search code, email, txn ID…" className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+          <Input
+            placeholder="Search code, email, txn ID…"
+            className="pl-9"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
+          />
         </div>
         <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(1); }}>
           <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
@@ -64,7 +76,7 @@ export default function CouponsPage() {
           <SelectTrigger className="w-[200px]"><SelectValue placeholder="Campaign" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Campaigns</SelectItem>
-            {mockCampaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            {allCampaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -83,7 +95,9 @@ export default function CouponsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginated.length === 0 ? (
+            {loading ? (
+              <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground animate-pulse">Loading coupons...</TableCell></TableRow>
+            ) : paginated.length === 0 ? (
               <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No coupons found.</TableCell></TableRow>
             ) : paginated.map(c => (
               <TableRow key={c._id} className="hover:bg-muted/30">
