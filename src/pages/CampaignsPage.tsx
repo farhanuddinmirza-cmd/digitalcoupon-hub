@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFetch } from '@/hooks/useApi';
 import { Campaign, Coupon } from '@/lib/types';
@@ -20,10 +20,16 @@ export default function CampaignsPage() {
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [exportCampaign, setExportCampaign] = useState<string>('');
 
+  const { data: campaigns, loading: loadingCampaigns } = useFetch<Campaign[]>('/api/campaigns');
+  const { data: coupons } = useFetch<Coupon[]>('/api/coupons');
+
+  const allCampaigns = campaigns ?? [];
+  const allCoupons = coupons ?? [];
+
   const handleDownloadExcel = () => {
     if (!exportCampaign) return;
-    const campaignCoupons = mockCoupons.filter(c => c.status === 'claimed' && c.campaignId === exportCampaign);
-    const campaign = mockCampaigns.find(c => c.id === exportCampaign);
+    const campaignCoupons = allCoupons.filter(c => c.status === 'claimed' && c.campaignId === exportCampaign);
+    const campaign = allCampaigns.find(c => c.id === exportCampaign);
     const rows = campaignCoupons.map(c => ({
       'Coupon Code': c.couponCode,
       'Campaign': c.campaignName,
@@ -54,12 +60,7 @@ export default function CampaignsPage() {
 
       <div className="flex flex-col gap-3">
         {!showExportDropdown ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowExportDropdown(true)}
-            className="w-fit"
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowExportDropdown(true)} className="w-fit">
             <Download className="h-3.5 w-3.5 mr-1" /> Download Excel
           </Button>
         ) : (
@@ -70,24 +71,15 @@ export default function CampaignsPage() {
                   <SelectValue placeholder="Select campaign to export" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockCampaigns.map(c => (
+                  {allCampaigns.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleDownloadExcel}
-                disabled={!exportCampaign}
-              >
+              <Button variant="default" size="sm" onClick={handleDownloadExcel} disabled={!exportCampaign}>
                 <Download className="h-3.5 w-3.5 mr-1" /> Download
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => { setShowExportDropdown(false); setExportCampaign(''); }}
-              >
+              <Button variant="ghost" size="sm" onClick={() => { setShowExportDropdown(false); setExportCampaign(''); }}>
                 Cancel
               </Button>
             </div>
@@ -101,41 +93,45 @@ export default function CampaignsPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {mockCampaigns.map(c => {
-          const coupons = mockCoupons.filter(cp => cp.campaignId === c.id);
-          const claimed = coupons.filter(cp => cp.status === 'claimed').length;
-          const unclaimed = coupons.filter(cp => cp.status === 'uploaded').length;
-          return (
-            <Card key={c.id} className="shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/campaigns/${c.id}`)}>
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-base">{c.name}</CardTitle>
-                  <Badge className={`${statusColor[c.status]} capitalize text-xs`}>{c.status}</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">{c.brand} · {c.store}</p>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Uploaded</span>
-                  <span className="font-medium">{coupons.length}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Claimed</span>
-                  <span className="font-medium">{claimed}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Unclaimed</span>
-                  <span className="font-medium">{unclaimed}</span>
-                </div>
-                <Button variant="outline" size="sm" className="w-full mt-2" onClick={e => { e.stopPropagation(); navigate(`/campaigns/${c.id}`); }}>
-                  <Eye className="h-3.5 w-3.5 mr-1" /> View Details
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {loadingCampaigns ? (
+        <div className="text-muted-foreground text-sm animate-pulse">Loading campaigns...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {allCampaigns.map(c => {
+            const couponsForCampaign = allCoupons.filter(cp => cp.campaignId === c.id);
+            const claimed = couponsForCampaign.filter(cp => cp.status === 'claimed').length;
+            const unclaimed = couponsForCampaign.filter(cp => cp.status === 'uploaded').length;
+            return (
+              <Card key={c.id} className="shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/campaigns/${c.id}`)}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <CardTitle className="text-base">{c.name}</CardTitle>
+                    <Badge className={`${statusColor[c.status]} capitalize text-xs`}>{c.status}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{c.brand} · {c.store}</p>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Uploaded</span>
+                    <span className="font-medium">{couponsForCampaign.length}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Claimed</span>
+                    <span className="font-medium">{claimed}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Unclaimed</span>
+                    <span className="font-medium">{unclaimed}</span>
+                  </div>
+                  <Button variant="outline" size="sm" className="w-full mt-2" onClick={e => { e.stopPropagation(); navigate(`/campaigns/${c.id}`); }}>
+                    <Eye className="h-3.5 w-3.5 mr-1" /> View Details
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
