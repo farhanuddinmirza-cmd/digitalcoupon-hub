@@ -1,14 +1,15 @@
 import { useMemo } from 'react';
-import { mockCampaigns, mockCoupons } from '@/lib/mock-data';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Trophy } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface LeaderboardEntry {
   rank: number;
   campaignName: string;
-  claimRate: number;
-  totalClaimed: number;
-  totalUploaded: number;
+  downloadRate: number;
+  totalLogins: number;
+  totalDownloads: number;
 }
 
 const rankStyle = (rank: number) => {
@@ -26,24 +27,28 @@ const rankLabel = (rank: number) => {
 };
 
 export default function LeaderboardPage() {
-  const leaderboard = useMemo<LeaderboardEntry[]>(() => {
-    const entries = mockCampaigns.map((c) => {
-      const coupons = mockCoupons.filter(cp => cp.campaignId === c.id);
-      const totalUploaded = coupons.length;
-      const totalClaimed = coupons.filter(cp => cp.status === 'claimed').length;
-      const claimRate = totalUploaded > 0 ? Math.round((totalClaimed / totalUploaded) * 100) : 0;
-      return {
-        rank: 0,
-        campaignName: c.name,
-        claimRate,
-        totalClaimed,
-        totalUploaded,
-      };
-    });
+  const { data, isLoading, error } = useAnalytics();
 
-    entries.sort((a, b) => b.claimRate - a.claimRate || b.totalClaimed - a.totalClaimed);
+  const leaderboard = useMemo<LeaderboardEntry[]>(() => {
+    if (!data) return [];
+    const entries = data.breakdownByCampaign.map(c => ({
+      rank: 0,
+      campaignName: c.campaign,
+      downloadRate: c.totalLogins > 0 ? Math.round((c.totalDownloads / c.totalLogins) * 100) : 0,
+      totalLogins: c.totalLogins,
+      totalDownloads: c.totalDownloads,
+    }));
+    entries.sort((a, b) => b.downloadRate - a.downloadRate || b.totalDownloads - a.totalDownloads);
     return entries.map((e, i) => ({ ...e, rank: i + 1 }));
-  }, []);
+  }, [data]);
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-destructive">Failed to load leaderboard data.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -52,39 +57,47 @@ export default function LeaderboardPage() {
           <Trophy className="h-6 w-6 text-primary" />
           Campaign Leaderboard
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Rankings based on claim rate performance</p>
+        <p className="text-sm text-muted-foreground mt-1">Rankings based on download rate performance</p>
       </div>
 
       <div className="rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-20 text-center">Rank</TableHead>
-              <TableHead className="text-center">Campaign</TableHead>
-              <TableHead className="text-center">Claim Rate</TableHead>
-              <TableHead className="text-center">Uploaded</TableHead>
-              <TableHead className="text-center">Claimed</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {leaderboard.map(entry => (
-              <TableRow key={entry.campaignName} className={entry.rank <= 3 ? rankStyle(entry.rank) : ''}>
-                <TableCell className="font-bold text-lg text-center">{rankLabel(entry.rank)}</TableCell>
-                <TableCell className="font-medium text-foreground text-center">{entry.campaignName}</TableCell>
-                <TableCell className="font-semibold text-foreground text-center">{entry.claimRate}%</TableCell>
-                <TableCell className="text-muted-foreground text-center">{entry.totalUploaded}</TableCell>
-                <TableCell className="text-muted-foreground text-center">{entry.totalClaimed}</TableCell>
-              </TableRow>
+        {isLoading ? (
+          <div className="p-6 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full rounded" />
             ))}
-            {leaderboard.length === 0 && (
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  No campaigns found.
-                </TableCell>
+                <TableHead className="w-20 text-center">Rank</TableHead>
+                <TableHead className="text-center">Campaign</TableHead>
+                <TableHead className="text-center">Download Rate</TableHead>
+                <TableHead className="text-center">Total Logins</TableHead>
+                <TableHead className="text-center">Total Downloads</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {leaderboard.map(entry => (
+                <TableRow key={entry.campaignName} className={entry.rank <= 3 ? rankStyle(entry.rank) : ''}>
+                  <TableCell className="font-bold text-lg text-center">{rankLabel(entry.rank)}</TableCell>
+                  <TableCell className="font-medium text-foreground text-center">{entry.campaignName}</TableCell>
+                  <TableCell className="font-semibold text-foreground text-center">{entry.downloadRate}%</TableCell>
+                  <TableCell className="text-muted-foreground text-center">{entry.totalLogins}</TableCell>
+                  <TableCell className="text-muted-foreground text-center">{entry.totalDownloads}</TableCell>
+                </TableRow>
+              ))}
+              {leaderboard.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    No campaigns found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </div>
     </div>
   );
