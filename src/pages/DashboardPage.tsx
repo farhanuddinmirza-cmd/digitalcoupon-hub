@@ -22,7 +22,7 @@ export default function DashboardPage() {
   const metrics = useMemo(() => {
     const totalUploaded = filtered.length;
     const totalClaimed = filtered.filter(c => c.status === 'claimed').length;
-    const totalVoided = filtered.filter(c => c.status === 'voided').length;
+    const totalVoided = filtered.filter(c => c.status === 'Unclaimed').length;
     const claimRate = totalUploaded > 0 ? Math.round((totalClaimed / totalUploaded) * 100) : 0;
     return { totalUploaded, totalClaimed, totalVoided, claimRate };
   }, [filtered]);
