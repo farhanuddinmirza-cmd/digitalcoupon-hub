@@ -1,4 +1,5 @@
-import { mockActivityLogs } from '@/lib/mock-data';
+import { useFetch } from '@/hooks/useApi';
+import { ActivityLog } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Upload, Ticket, FileText, UserPlus, Shield } from 'lucide-react';
@@ -21,7 +22,17 @@ const actionColors: Record<string, string> = {
 };
 
 export default function ActivityLogsPage() {
-  const sorted = [...mockActivityLogs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const { data: logs, loading } = useFetch<ActivityLog[]>('/api/activity');
+  const sorted = [...(logs || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold text-foreground">Activity Logs</h1>
+        <p className="text-muted-foreground">Loading activity logs...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { mockUsers } from '@/lib/mock-data';
+import { useFetch } from '@/hooks/useApi';
 import { User, UserRole } from '@/lib/types';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -25,8 +25,13 @@ function AccessDenied() {
 }
 
 function UserManagementContent() {
-  const [users, setUsers] = useState<User[]>([...mockUsers]);
+  const { data: fetchedUsers, loading } = useFetch<User[]>('/api/users');
+  const [users, setUsers] = useState<User[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (fetchedUsers) setUsers(fetchedUsers);
+  }, [fetchedUsers]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
@@ -54,31 +59,31 @@ function UserManagementContent() {
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formName.trim() || !formEmail.trim()) return;
     if (editingUser) {
-      setUsers(prev => prev.map(u => u.id === editingUser.id
-        ? { ...u, name: formName.trim(), email: formEmail.trim(), password: formPassword.trim() || undefined, role: formRole }
-        : u
-      ));
+      const updates = { _id: (editingUser as any)._id, name: formName.trim(), email: formEmail.trim(), role: formRole, ...(formPassword.trim() ? { password: formPassword.trim() } : {}) };
+      const res = await fetch('/api/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+      if (res.ok) {
+        setUsers(prev => prev.map(u => (u as any)._id === (editingUser as any)._id ? { ...u, ...updates } : u));
+      }
     } else {
-      const newUser: User = {
-        id: `u${Date.now()}`,
-        name: formName.trim(),
-        email: formEmail.trim(),
-        password: formPassword.trim() || undefined,
-        role: formRole,
-        enabled: true,
-        createdAt: new Date().toISOString().split('T')[0],
-      };
-      setUsers(prev => [...prev, newUser]);
+      const newUser = { name: formName.trim(), email: formEmail.trim(), password: formPassword.trim() || undefined, role: formRole, enabled: true, createdAt: new Date().toISOString().split('T')[0] };
+      const res = await fetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newUser) });
+      if (res.ok) {
+        const created = await res.json();
+        setUsers(prev => [...prev, created]);
+      }
     }
     setDialogOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId) {
-      setUsers(prev => prev.filter(u => u.id !== deleteId));
+      const res = await fetch(`/api/users?id=${deleteId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setUsers(prev => prev.filter(u => (u as any)._id !== deleteId && u.id !== deleteId));
+      }
       setDeleteId(null);
     }
   };
@@ -88,6 +93,15 @@ function UserManagementContent() {
     ops: 'bg-accent text-accent-foreground',
     viewer: 'bg-secondary text-secondary-foreground',
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+        <p className="text-muted-foreground">Loading users...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -113,7 +127,7 @@ function UserManagementContent() {
           </TableHeader>
           <TableBody>
             {users.map(u => (
-              <TableRow key={u.id}>
+              <TableRow key={(u as any)._id || u.id}>
                 <TableCell className="font-medium text-foreground">{u.name}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
                 <TableCell>
@@ -124,7 +138,7 @@ function UserManagementContent() {
                     <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(u.id)}>
+                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteId((u as any)._id || u.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

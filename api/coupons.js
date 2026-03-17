@@ -3,7 +3,7 @@ import clientPromise from './db.js';
 export default async function handler(req, res) {
   try {
     const client = await clientPromise;
-    const db = client.db('digitalcoupon');
+    const db = client.db('physical_coupon');
     const { campaignId } = req.query;
     const query = campaignId ? { campaignId } : {};
     const coupons = await db.collection('coupons').find(query).toArray();

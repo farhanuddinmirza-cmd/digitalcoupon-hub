@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { mockUsers } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+import { useFetch } from '@/hooks/useApi';
 import { User, UserRole } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -16,15 +16,41 @@ const roleBadge: Record<UserRole, string> = {
 
 export default function UsersPage() {
   const { can } = useAuth();
-  const [users, setUsers] = useState<User[]>([...mockUsers]);
+  const { data: fetchedUsers, loading } = useFetch<User[]>('/api/users');
+  const [users, setUsers] = useState<User[]>([]);
 
-  const toggleEnabled = (id: string) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, enabled: !u.enabled } : u));
+  useEffect(() => {
+    if (fetchedUsers) setUsers(fetchedUsers);
+  }, [fetchedUsers]);
+
+  const toggleEnabled = async (id: string) => {
+    const user = users.find(u => (u as any)._id === id || u.id === id);
+    if (!user) return;
+    const updates = { _id: (user as any)._id, enabled: !user.enabled };
+    const res = await fetch('/api/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+    if (res.ok) {
+      setUsers(prev => prev.map(u => ((u as any)._id === id || u.id === id) ? { ...u, enabled: !u.enabled } : u));
+    }
   };
 
-  const changeRole = (id: string, role: UserRole) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
+  const changeRole = async (id: string, role: UserRole) => {
+    const user = users.find(u => (u as any)._id === id || u.id === id);
+    if (!user) return;
+    const updates = { _id: (user as any)._id, role };
+    const res = await fetch('/api/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+    if (res.ok) {
+      setUsers(prev => prev.map(u => ((u as any)._id === id || u.id === id) ? { ...u, role } : u));
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold text-foreground">Users & Access</h1>
+        <p className="text-muted-foreground">Loading users...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -42,12 +68,12 @@ export default function UsersPage() {
           </TableHeader>
           <TableBody>
             {users.map(u => (
-              <TableRow key={u.id}>
+              <TableRow key={(u as any)._id || u.id}>
                 <TableCell className="font-medium">{u.name}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
                 <TableCell>
                   {can('manage_roles') ? (
-                    <Select value={u.role} onValueChange={(v) => changeRole(u.id, v as UserRole)}>
+                    <Select value={u.role} onValueChange={(v) => changeRole((u as any)._id || u.id, v as UserRole)}>
                       <SelectTrigger className="w-[110px] h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
@@ -68,7 +94,7 @@ export default function UsersPage() {
                 </TableCell>
                 {can('manage_roles') && (
                   <TableCell>
-                    <Switch checked={u.enabled} onCheckedChange={() => toggleEnabled(u.id)} />
+                    <Switch checked={u.enabled} onCheckedChange={() => toggleEnabled((u as any)._id || u.id)} />
                   </TableCell>
                 )}
               </TableRow>
