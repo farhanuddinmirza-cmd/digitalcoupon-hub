@@ -1,8 +1,11 @@
 import { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useTheme } from 'next-themes';
+import { Sun, Moon } from 'lucide-react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 
 const PAGE_TITLES: Record<string, string> = {
   '/':          'Overview',
@@ -20,6 +23,7 @@ function getTitle(pathname: string) {
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const title = getTitle(location.pathname);
+  const { theme, setTheme } = useTheme();
 
   return (
     <SidebarProvider>
@@ -32,6 +36,14 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             <Separator orientation="vertical" className="h-5" />
             <h2 className="text-sm font-semibold text-foreground">{title}</h2>
             <div className="flex-1" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            >
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
           </header>
 
           {/* Page content */}

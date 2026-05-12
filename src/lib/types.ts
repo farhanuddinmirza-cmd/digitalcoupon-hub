@@ -63,7 +63,7 @@ export interface DashboardMetrics {
 
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   admin: ['manage_users', 'manage_roles', 'upload_coupons', 'download_files', 'view_metrics', 'download_pdf'],
-  ops: ['view_metrics', 'upload_coupons', 'download_files'],
+  ops: ['manage_users', 'view_metrics', 'upload_coupons', 'download_files'],
   viewer: ['view_metrics'],
 };
 

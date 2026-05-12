@@ -8,7 +8,8 @@ export default async function handler(req, res) {
     const collection = db.collection('users');
 
     if (req.method === 'GET') {
-      const users = await collection.find({}, { projection: { password: 0 } }).toArray();
+      const filter = req.query.createdBy ? { createdBy: req.query.createdBy } : {};
+      const users = await collection.find(filter, { projection: { password: 0 } }).toArray();
       return res.status(200).json(users);
     }
 

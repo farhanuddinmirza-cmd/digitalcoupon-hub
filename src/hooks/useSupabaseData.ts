@@ -27,7 +27,7 @@ async function qCount(
   return (count ?? 0) as number;
 }
 
-async function qCountWhere(table: string, col: string, val: string): Promise<number> {
+async function qCountWhere(table: string, col: string, val: string | boolean): Promise<number> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { count, error } = await (supabase.from(table) as any)
     .select('*', { count: 'exact', head: true })
@@ -74,7 +74,7 @@ async function fetchCampStats(
     hasCoupon
       ? qCount(table, 'coupon_code', s7, dateCol)
       : qCount(table, undefined, s7, dateCol),
-    pdfCol ? qCountWhere(table, pdfCol, 'true') : Promise.resolve(0),
+    pdfCol ? qCountWhere(table, pdfCol, true) : Promise.resolve(0),
   ]);
   const claimed = allEntriesAreCoupon ? total : claimedRaw;
   return { total, claimed, active: recent > 0, pdfCount };

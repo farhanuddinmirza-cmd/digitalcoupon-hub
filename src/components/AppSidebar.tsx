@@ -1,6 +1,5 @@
-import { LayoutDashboard, Megaphone, Activity, Users, LogOut, Sun, Moon, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Megaphone, Activity, Users, LogOut, ChevronRight } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 import {
@@ -64,7 +63,6 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const { user, logout, can } = useAuth();
-  const { theme, setTheme } = useTheme();
 
   const showAdmin = can('manage_users');
 
@@ -138,18 +136,6 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="px-3 py-3 border-t border-sidebar-border space-y-2">
-        {/* Theme toggle */}
-        <div className={cn('flex', collapsed ? 'justify-center' : 'justify-end')}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          >
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
-        </div>
-
         {/* User profile + logout */}
         <div className={cn('flex items-center gap-2', collapsed && 'justify-center')}>
           <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center shrink-0">

@@ -24,8 +24,9 @@ function AccessDenied() {
   );
 }
 
-function UserManagementContent() {
-  const { data: fetchedUsers, loading } = useFetch<User[]>('/api/users');
+function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: string; isAdmin: boolean }) {
+  const apiUrl = isAdmin ? '/api/users' : `/api/users?createdBy=${currentUserId}`;
+  const { data: fetchedUsers, loading } = useFetch<User[]>(apiUrl);
   const [users, setUsers] = useState<User[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -68,7 +69,7 @@ function UserManagementContent() {
         setUsers(prev => prev.map(u => (u as any)._id === (editingUser as any)._id ? { ...u, ...updates } : u));
       }
     } else {
-      const newUser = { name: formName.trim(), email: formEmail.trim(), password: formPassword.trim() || undefined, role: formRole, enabled: true, createdAt: new Date().toISOString().split('T')[0] };
+      const newUser = { name: formName.trim(), email: formEmail.trim(), password: formPassword.trim() || undefined, role: formRole, enabled: true, createdAt: new Date().toISOString().split('T')[0], createdBy: currentUserId };
       const res = await fetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newUser) });
       if (res.ok) {
         const created = await res.json();
@@ -217,12 +218,13 @@ function UserManagementContent() {
 }
 
 export default function UserManagementPage() {
-  const { can } = useAuth();
-  const isAdmin = can('manage_users');
+  const { user, can } = useAuth();
+  const canManage = can('manage_users');
 
-  if (!isAdmin) {
+  if (!canManage) {
     return <AccessDenied />;
   }
 
-  return <UserManagementContent />;
+  const isAdmin = user?.role === 'admin';
+  return <UserManagementContent currentUserId={user?.id ?? ''} isAdmin={isAdmin} />;
 }
