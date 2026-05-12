@@ -1,12 +1,13 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useCampaigns, useCoupons, useActivityLogs } from '@/hooks/useSupabaseData';
+import { useCampaigns, useActivityLogs } from '@/hooks/useSupabaseData';
 import { MetricCard } from '@/components/MetricCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Upload, Ticket, AlertTriangle, FileText, Download } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
+import { ArrowLeft, Upload, Ticket, AlertTriangle, FileText, Download, Loader2, Check, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -18,17 +19,25 @@ const STATUS_COLORS: Record<string, string> = {
   draft:     'bg-gray-100  text-gray-600  dark:bg-gray-800     dark:text-gray-400   border-0',
 };
 
+const TABLE_CONFIG: Record<string, { table: string; columns: string; orderCol: string }> = {
+  'holiday-songs': { table: 'Holiday Songs', columns: 'id,song_code,your_name,their_name,title,coupon_code,pdf,created_at,updated_at', orderCol: 'updated_at' },
+  'songs':         { table: 'songs',         columns: 'id,song_code,your_name,their_name,title,coupon_code,created_at,updated_at',      orderCol: 'updated_at' },
+  'uploads':       { table: 'uploads',       columns: 'id,name,city,destination,number,image,created_at',                               orderCol: 'created_at' },
+  'poses':         { table: 'Poses',         columns: 'id,name,phone,image_url,created_at',                                             orderCol: 'created_at' },
+};
+
 export default function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { can } = useAuth();
 
-  const { data: campaigns, loading: loadingCampaigns } = useCampaigns();
-  const { data: coupons,   loading: loadingCoupons   } = useCoupons(id);
-  const { data: logs }                                  = useActivityLogs(id, 10);
+  const [confirmDownload, setConfirmDownload] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  // Only useCampaigns needed for metrics — useCoupons no longer gates the page
+  const { data: campaigns, loading } = useCampaigns();
+  const { data: logs }               = useActivityLogs(id, 10);
 
   const campaign   = (campaigns ?? []).find(c => c.id === id);
-  const allCoupons = coupons ?? [];
   const recentLogs = (logs ?? []).slice(0, 5);
 
   const totalEntries   = campaign?.totalEntries ?? 0;
@@ -40,35 +49,45 @@ export default function CampaignDetailPage() {
   const unclaimed      = hasCoupon ? totalEntries - totalClaimed : 0;
   const claimRate      = totalEntries && hasCoupon
     ? Math.round((totalClaimed / totalEntries) * 100) : couponPerEntry ? 100 : 0;
-  const totalUploaded  = totalEntries;
 
   const statusChartData = [
-    { name: 'Claimed',  value: totalClaimed,  fill: 'hsl(172,66%,38%)' },
-    { name: 'Pending',  value: unclaimed,      fill: 'hsl(215,70%,60%)' },
-    { name: 'Voided',   value: totalVoided,    fill: 'hsl(0,65%,60%)' },
+    { name: 'Claimed', value: totalClaimed, fill: 'hsl(172,66%,38%)' },
+    { name: 'Pending', value: unclaimed,    fill: 'hsl(215,70%,60%)' },
+    { name: 'Voided',  value: totalVoided,  fill: 'hsl(0,65%,60%)' },
   ].filter(d => d.value > 0);
 
-  const loading = loadingCampaigns || loadingCoupons;
+  const handleDownloadExcel = async () => {
+    if (!id || !campaign) return;
+    const cfg = TABLE_CONFIG[id];
+    if (!cfg) return;
 
-  const handleDownloadExcel = () => {
-    const rows = allCoupons
-      .filter(c => c.status === 'claimed')
-      .map(c => ({
-        'Coupon Code':    c.couponCode,
-        'Campaign':       c.campaignName,
-        'Brand':          c.brand,
-        'Store':          c.store,
-        'Claimed By':     c.claimedBy ?? '',
-        'Claimed At':     c.claimedAt ? new Date(c.claimedAt).toLocaleString() : '',
-        'Transaction ID': c.transactionId ?? '',
-        'Transaction Date': c.transactionDate ?? '',
-      }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Claimed Coupons');
-    const today = new Date().toISOString().slice(0, 10);
-    const safeName = (campaign?.name ?? 'campaign').replace(/[^a-zA-Z0-9]/g, '-');
-    XLSX.writeFile(wb, `coupons-${safeName}-${today}.xlsx`);
+    setConfirmDownload(false);
+    setDownloading(true);
+    try {
+      const PAGE = 1000;
+      const rows: Record<string, unknown>[] = [];
+      let from = 0;
+      while (true) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase.from(cfg.table) as any)
+          .select(cfg.columns)
+          .order(cfg.orderCol, { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (error || !data?.length) break;
+        rows.push(...data);
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+      if (!rows.length) return;
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      const today = new Date().toISOString().slice(0, 10);
+      const safeName = campaign.name.replace(/[^a-zA-Z0-9]/g, '-');
+      XLSX.utils.book_append_sheet(wb, ws, safeName.slice(0, 31));
+      XLSX.writeFile(wb, `${safeName}-${today}.xlsx`);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   if (loading) {
@@ -102,6 +121,8 @@ export default function CampaignDetailPage() {
     );
   }
 
+  const hasCfg = !!TABLE_CONFIG[id ?? ''];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -116,20 +137,46 @@ export default function CampaignDetailPage() {
               {campaign.status}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">{campaign.brand} · {campaign.store}</p>
-        </div>
-        <div className="flex gap-2 shrink-0">
-          {can('download_files') && (
-            <Button variant="outline" size="sm" className="gap-1 text-xs h-8" onClick={handleDownloadExcel}>
-              <Download className="h-3.5 w-3.5" /> Excel
-            </Button>
-          )}
-          {can('upload_coupons') && (
-            <Button size="sm" className="gap-1 text-xs h-8">
-              <Upload className="h-3.5 w-3.5" /> Upload
-            </Button>
+          {(campaign.brand || campaign.store) && (
+            <p className="text-sm text-muted-foreground mt-0.5">{campaign.brand} · {campaign.store}</p>
           )}
         </div>
+
+        {hasCfg && (
+          <div className="shrink-0">
+            {confirmDownload ? (
+              <div className="flex items-center gap-1.5 bg-muted/60 rounded-lg px-3 py-1.5 text-xs">
+                <span className="text-foreground">Download all data?</span>
+                <button
+                  onClick={handleDownloadExcel}
+                  className="text-green-600 hover:text-green-700 transition-colors"
+                  disabled={downloading}
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setConfirmDownload(false)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 text-xs h-8"
+                onClick={() => setConfirmDownload(true)}
+                disabled={downloading}
+              >
+                {downloading
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Exporting…</>
+                  : <><Download className="h-3.5 w-3.5" /> Excel</>
+                }
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* KPI cards */}
@@ -145,7 +192,7 @@ export default function CampaignDetailPage() {
             <MetricCard title="Total Entries"  value={totalEntries.toLocaleString()}  icon={<Upload />}        color="blue"   />
             {(hasCoupon || couponPerEntry) && <>
               <MetricCard title="Coupons Issued" value={totalClaimed.toLocaleString()} icon={<Ticket />}        color="green"  />
-              {hasCoupon && <MetricCard title="Pending"      value={unclaimed.toLocaleString()}    icon={<AlertTriangle />} color="orange" />}
+              {hasCoupon && <MetricCard title="Pending"       value={unclaimed.toLocaleString()}    icon={<AlertTriangle />} color="orange" />}
               {hasPdf    && <MetricCard title="PDF Downloads" value={pdfCount.toLocaleString()}     icon={<FileText />}      color="purple" />}
               <MetricCard title="Issue Rate"     value={`${claimRate}%`}               icon={<Download />}      color="blue"   />
             </>}

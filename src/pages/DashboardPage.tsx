@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Ticket, TrendingUp, LayoutGrid, ArrowRight, RefreshCw } from 'lucide-react';
+import { Ticket, TrendingUp, LayoutGrid, ArrowRight, RefreshCw, ChevronDown, Check } from 'lucide-react';
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line,
 } from 'recharts';
 import { format, parseISO } from 'date-fns';
@@ -10,10 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MetricCard } from '@/components/MetricCard';
 import { useDashboardStats } from '@/hooks/useSupabaseData';
 import { useQueryClient } from '@tanstack/react-query';
+import { cn } from '@/lib/utils';
 
 const STATUS_COLORS: Record<string, string> = {
   active:    'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400 border-0',
@@ -61,9 +61,88 @@ function toWeekly(daily: { date: string; [k: string]: string | number }[]) {
   return Object.values(buckets).sort((a, b) => (a.date as string).localeCompare(b.date as string));
 }
 
+// ── Multi-select Campaign Filter ─────────────────────────────────────────────
+
+function MultiCampaignSelect({
+  campaigns,
+  selected,
+  onChange,
+}: {
+  campaigns: { id: string; fullName: string }[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const toggle = (id: string) => {
+    onChange(selected.includes(id) ? selected.filter(s => s !== id) : [...selected, id]);
+  };
+
+  const label = selected.length === 0
+    ? 'All Campaigns'
+    : selected.length === 1
+      ? (campaigns.find(c => c.id === selected[0])?.fullName ?? '1 selected')
+      : `${selected.length} campaigns`;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 h-8 px-3 text-xs rounded-md border border-input bg-background text-foreground hover:bg-muted/50 transition-colors min-w-[160px] justify-between"
+      >
+        <span className="truncate">{label}</span>
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-9 z-50 bg-popover border border-border rounded-lg shadow-md py-1 min-w-[180px]">
+          <button
+            onClick={() => onChange([])}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-xs hover:bg-muted/50 transition-colors"
+          >
+            <div className={cn('h-3.5 w-3.5 rounded-sm border flex items-center justify-center', selected.length === 0 ? 'bg-primary border-primary' : 'border-input')}>
+              {selected.length === 0 && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+            </div>
+            <span>All Campaigns</span>
+          </button>
+          <div className="h-px bg-border/60 my-1" />
+          {campaigns.map(c => (
+            <button
+              key={c.id}
+              onClick={() => toggle(c.id)}
+              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs hover:bg-muted/50 transition-colors"
+            >
+              <div className={cn('h-3.5 w-3.5 rounded-sm border flex items-center justify-center shrink-0', selected.includes(c.id) ? 'bg-primary border-primary' : 'border-input')}>
+                {selected.includes(c.id) && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+              </div>
+              <span className="truncate">{c.fullName}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Campaign line colors ──────────────────────────────────────────────────────
+const CAMP_COLORS: Record<string, string> = {
+  'Holiday Songs': 'hsl(172,66%,38%)',
+  'Songs':         'hsl(215,70%,55%)',
+  'Uploads':       'hsl(35,90%,55%)',
+  'Poses':         'hsl(280,60%,55%)',
+};
+
 export default function DashboardPage() {
   const qc = useQueryClient();
-  const [campaignFilter, setCampaignFilter] = useState('all');
+  const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
   const [perfPeriod, setPerfPeriod] = useState<PerfPeriod>('daily');
   const [refreshing, setRefreshing] = useState(false);
   const { data: stats, loading, error } = useDashboardStats();
@@ -75,22 +154,73 @@ export default function DashboardPage() {
     setTimeout(() => setRefreshing(false), 800);
   };
 
-  const chartData = useMemo(() => {
-    if (!stats) return null;
-    if (campaignFilter === 'all') return stats;
-    return { ...stats, byCampaign: stats.byCampaign.filter(c => c.id === campaignFilter) };
-  }, [stats, campaignFilter]);
+  const isFiltered = selectedCampaigns.length > 0;
 
+  // Filtered campaign list
+  const filteredCampaigns = useMemo(() => {
+    if (!stats?.byCampaign) return [];
+    if (!isFiltered) return stats.byCampaign;
+    return stats.byCampaign.filter(c => selectedCampaigns.includes(c.id));
+  }, [stats, selectedCampaigns, isFiltered]);
+
+  // KPI metrics derived from filtered campaigns
+  const filteredKpi = useMemo(() => {
+    if (!stats) return { total: 0, claimRate: 0, activeCampaigns: 0 };
+    if (!isFiltered) return { total: stats.total, claimRate: stats.claimRate, activeCampaigns: stats.activeCampaigns };
+    const totalClaimed = filteredCampaigns.reduce((s, c) => s + c.claimed, 0);
+    const totalEntries = filteredCampaigns.reduce((s, c) => s + c.total, 0);
+    const active = filteredCampaigns.filter(c => c.status === 'active').length;
+    return {
+      total: totalClaimed,
+      claimRate: totalEntries ? Math.round((totalClaimed / totalEntries) * 100) : 0,
+      activeCampaigns: active,
+    };
+  }, [stats, filteredCampaigns, isFiltered]);
+
+  // Status distribution for donut (derived from filtered campaigns)
+  const statusDistribution = useMemo(() => {
+    if (!stats) return [];
+    if (!isFiltered) return stats.statusDistribution;
+    const claimed  = filteredCampaigns.reduce((s, c) => s + c.claimed, 0);
+    const total    = filteredCampaigns.reduce((s, c) => s + c.total, 0);
+    const pending  = total - claimed;
+    return [
+      { name: 'Claimed', value: claimed, fill: 'hsl(172,66%,38%)' },
+      { name: 'Pending', value: pending, fill: 'hsl(215,70%,60%)' },
+    ].filter(d => d.value > 0);
+  }, [stats, filteredCampaigns, isFiltered]);
+
+  // Daily claims area chart — sum selected campaign performance columns
+  const dailyClaims = useMemo(() => {
+    if (!stats) return [];
+    if (!isFiltered) return stats.dailyClaims;
+    if (!stats.dailyPerformance?.length) return [];
+    const names = filteredCampaigns.map(c => c.fullName);
+    return stats.dailyPerformance.map(row => ({
+      date: row.date as string,
+      count: names.reduce((s, n) => s + ((row[n] as number) || 0), 0),
+    }));
+  }, [stats, filteredCampaigns, isFiltered]);
+
+  // Performance chart — filter to selected campaign lines
   const perfData = useMemo(() => {
     if (!stats?.dailyPerformance) return [];
     const raw = perfPeriod === 'weekly' ? toWeekly(stats.dailyPerformance) : stats.dailyPerformance;
-    if (campaignFilter === 'all') return raw;
+    if (!isFiltered) return raw;
+    const names = filteredCampaigns.map(c => c.fullName);
     return raw.map(row => {
-      const camp = stats.byCampaign.find(c => c.id === campaignFilter);
-      if (!camp) return row;
-      return { date: row.date, [camp.fullName]: row[camp.fullName] ?? 0 };
+      const filtered: Record<string, string | number> = { date: row.date };
+      names.forEach(n => { filtered[n] = (row[n] as number) ?? 0; });
+      return filtered;
     });
-  }, [stats, campaignFilter, perfPeriod]);
+  }, [stats, filteredCampaigns, isFiltered, perfPeriod]);
+
+  // Campaign line keys to render
+  const perfKeys = useMemo(() => {
+    if (!stats?.byCampaign) return [];
+    const all = stats.byCampaign.map(c => c.fullName);
+    return isFiltered ? filteredCampaigns.map(c => c.fullName) : all;
+  }, [stats, filteredCampaigns, isFiltered]);
 
   if (error) {
     return (
@@ -113,15 +243,11 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={campaignFilter} onValueChange={setCampaignFilter}>
-            <SelectTrigger className="w-[180px] h-8 text-xs">
-              <SelectValue placeholder="All Campaigns" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Campaigns</SelectItem>
-              {stats?.byCampaign.map(c => <SelectItem key={c.id} value={c.id}>{c.fullName}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <MultiCampaignSelect
+            campaigns={stats?.byCampaign ?? []}
+            selected={selectedCampaigns}
+            onChange={setSelectedCampaigns}
+          />
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleRefresh}>
             <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
@@ -130,9 +256,9 @@ export default function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
-        <MetricCard loading={loading} title="Coupons Issued"   value={stats?.total ?? 0}            icon={<Ticket />}     color="green"  />
-        <MetricCard loading={loading} title="Issue Rate"       value={`${stats?.claimRate ?? 0}%`}  icon={<TrendingUp />} color="purple" />
-        <MetricCard loading={loading} title="Active Campaigns" value={stats?.activeCampaigns ?? 0}   icon={<LayoutGrid />} color="blue"   />
+        <MetricCard loading={loading} title="Coupons Issued"   value={filteredKpi.total}            icon={<Ticket />}     color="green"  />
+        <MetricCard loading={loading} title="Issue Rate"       value={`${filteredKpi.claimRate}%`}  icon={<TrendingUp />} color="purple" />
+        <MetricCard loading={loading} title="Active Campaigns" value={filteredKpi.activeCampaigns}  icon={<LayoutGrid />} color="blue"   />
       </div>
 
       {/* Donut + Area charts */}
@@ -143,13 +269,13 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="px-3 pb-4">
             {loading ? <Skeleton className="h-[220px] rounded-xl" />
-            : !stats?.total ? <EmptyChart label="No coupon data yet" />
+            : !statusDistribution.length ? <EmptyChart label="No coupon data yet" />
             : (
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
-                  <Pie data={stats.statusDistribution} cx="50%" cy="50%"
+                  <Pie data={statusDistribution} cx="50%" cy="50%"
                     innerRadius={58} outerRadius={86} paddingAngle={3} dataKey="value">
-                    {stats.statusDistribution.map((e, i) => (
+                    {statusDistribution.map((e, i) => (
                       <Cell key={i} fill={e.fill} stroke="transparent" />
                     ))}
                   </Pie>
@@ -167,10 +293,10 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="px-3 pb-4">
             {loading ? <Skeleton className="h-[220px] rounded-xl" />
-            : !stats?.dailyClaims.length ? <EmptyChart label="No claim activity yet" />
+            : !dailyClaims.length ? <EmptyChart label="No claim activity yet" />
             : (
               <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={stats.dailyClaims} margin={{ top: 4, right: 4, bottom: 0, left: -22 }}>
+                <AreaChart data={dailyClaims} margin={{ top: 4, right: 4, bottom: 0, left: -22 }}>
                   <defs>
                     <linearGradient id="claimGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%"  stopColor="hsl(172,66%,38%)" stopOpacity={0.25} />
@@ -190,7 +316,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Campaign Performance — daily / weekly trend */}
+      {/* Campaign Performance */}
       <Card className="border-border/60">
         <CardHeader className="pb-1 pt-4 px-5 flex flex-row items-center justify-between gap-2 flex-wrap">
           <CardTitle className="text-sm font-semibold">Campaign Performance</CardTitle>
@@ -218,12 +344,21 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={perfData} margin={{ top: 4, right: 8, bottom: 0, left: -22 }}>
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false}
-                  tickFormatter={d => { try { return format(parseISO(d), perfPeriod === 'weekly' ? 'MMM d' : 'MMM d'); } catch { return d; } }} />
+                  tickFormatter={d => { try { return format(parseISO(d), 'MMM d'); } catch { return d; } }} />
                 <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip formatter={(v, n) => [v, n]} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
-                <Line type="monotone" dataKey="Holiday Songs" stroke="hsl(172,66%,38%)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="Songs"         stroke="hsl(215,70%,55%)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                {perfKeys.map(name => (
+                  <Line
+                    key={name}
+                    type="monotone"
+                    dataKey={name}
+                    stroke={CAMP_COLORS[name] ?? 'hsl(0,0%,60%)'}
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                  />
+                ))}
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -267,9 +402,9 @@ export default function DashboardPage() {
           <CardContent className="px-5 pb-4">
             {loading
               ? <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-9 rounded-lg" />)}</div>
-              : !stats?.byCampaign.length
-                ? <p className="text-sm text-muted-foreground py-6 text-center">No campaigns yet</p>
-                : stats.byCampaign.slice(0, 6).map((c, i, arr) => (
+              : !filteredCampaigns.length
+                ? <p className="text-sm text-muted-foreground py-6 text-center">No campaigns</p>
+                : filteredCampaigns.slice(0, 6).map((c, i, arr) => (
                   <div key={c.id} className={`flex items-center justify-between py-3 ${i < arr.length - 1 ? 'border-b border-border/40' : ''}`}>
                     <div className="flex items-center gap-2 min-w-0">
                       <Badge className={`text-[10px] px-1.5 py-0 shrink-0 ${STATUS_COLORS[c.status] ?? ''}`}>{c.status}</Badge>
