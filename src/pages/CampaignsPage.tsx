@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCampaigns, useCoupons } from '@/hooks/useSupabaseData';
+import { useCampaigns, useCoupons, useDashboardStats } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/lib/auth-context';
+import { DateRangeFilter, DateRange } from '@/components/DateRangeFilter';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -81,11 +82,29 @@ export default function CampaignsPage() {
     catch { return {}; }
   });
 
+  const [dateRange, setDateRange] = useState<DateRange | null>(null);
+
   const { data: campaigns, loading } = useCampaigns();
   const { data: coupons } = useCoupons();
+  const { data: dashStats } = useDashboardStats();
 
   const allCampaigns = campaigns ?? [];
   const allCoupons   = coupons   ?? [];
+
+  // Filter campaigns to those with activity in the selected date range
+  const displayedCampaigns = useMemo(() => {
+    if (!dateRange || !dashStats?.dailyPerformance?.length) return allCampaigns;
+    const activeNames = new Set<string>();
+    dashStats.dailyPerformance
+      .filter(row => (row.date as string) >= dateRange.from && (row.date as string) <= dateRange.to)
+      .forEach(row => {
+        Object.entries(row).forEach(([k, v]) => {
+          if (k !== 'date' && (v as number) > 0) activeNames.add(k);
+        });
+      });
+    const filtered = allCampaigns.filter(c => activeNames.has(c.name));
+    return filtered.length > 0 ? filtered : allCampaigns;
+  }, [allCampaigns, dateRange, dashStats]);
 
   const getDisplayName = (id: string, fallback: string) => customNames[id] ?? fallback;
 
@@ -166,40 +185,46 @@ export default function CampaignsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground">Campaigns</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{allCampaigns.length} campaign{allCampaigns.length !== 1 ? 's' : ''} total</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {displayedCampaigns.length}{dateRange ? ` of ${allCampaigns.length}` : ''} campaign{allCampaigns.length !== 1 ? 's' : ''}
+            {dateRange ? ` active ${dateRange.from} → ${dateRange.to}` : ' total'}
+          </p>
         </div>
-        {!showExport ? (
-          <Button variant="outline" size="sm" className="gap-2 w-fit" onClick={() => setShowExport(true)}>
-            <Download className="h-3.5 w-3.5" /> Export
-          </Button>
-        ) : (
-          <div className="flex flex-wrap items-center gap-2 bg-muted/50 rounded-lg p-3">
-            <Select value={exportCampaign} onValueChange={setExportCampaign}>
-              <SelectTrigger className="w-[200px] h-8 text-xs">
-                <SelectValue placeholder="Select campaign…" />
-              </SelectTrigger>
-              <SelectContent>
-                {allCampaigns.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{getDisplayName(c.id, c.name)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => doDownload('excel')} disabled={!exportCampaign || exporting}>
-              <Download className="h-3.5 w-3.5 mr-1" /> {exporting ? 'Loading…' : 'Excel'}
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
+          {!showExport ? (
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowExport(true)}>
+              <Download className="h-3.5 w-3.5" /> Export
             </Button>
-            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => doDownload('csv')} disabled={!exportCampaign || exporting}>
-              <Download className="h-3.5 w-3.5 mr-1" /> {exporting ? '…' : 'CSV'}
-            </Button>
-            <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setShowExport(false); setExportCampaign(''); }}>
-              Cancel
-            </Button>
-            {!exportCampaign && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <AlertCircle className="h-3.5 w-3.5" /> Select a campaign to export
-              </span>
-            )}
-          </div>
-        )}
+          ) : (
+            <div className="flex flex-wrap items-center gap-2 bg-muted/50 rounded-lg p-3">
+              <Select value={exportCampaign} onValueChange={setExportCampaign}>
+                <SelectTrigger className="w-[200px] h-8 text-xs">
+                  <SelectValue placeholder="Select campaign…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allCampaigns.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{getDisplayName(c.id, c.name)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => doDownload('excel')} disabled={!exportCampaign || exporting}>
+                <Download className="h-3.5 w-3.5 mr-1" /> {exporting ? 'Loading…' : 'Excel'}
+              </Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => doDownload('csv')} disabled={!exportCampaign || exporting}>
+                <Download className="h-3.5 w-3.5 mr-1" /> {exporting ? '…' : 'CSV'}
+              </Button>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setShowExport(false); setExportCampaign(''); }}>
+                Cancel
+              </Button>
+              {!exportCampaign && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <AlertCircle className="h-3.5 w-3.5" /> Select a campaign to export
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Summary pills */}
@@ -223,13 +248,13 @@ export default function CampaignsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-48 rounded-xl" />)}
         </div>
-      ) : allCampaigns.length === 0 ? (
+      ) : displayedCampaigns.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[300px] gap-3 text-center">
-          <p className="text-sm text-muted-foreground">No campaigns yet</p>
+          <p className="text-sm text-muted-foreground">No campaigns found for the selected period</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {allCampaigns.map(c => {
+          {displayedCampaigns.map(c => {
             const displayName = getDisplayName(c.id, c.name);
             const totalEntries = c.totalEntries ?? 0;
             const claimed      = c.withCoupon ?? 0;

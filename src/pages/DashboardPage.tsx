@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Ticket, TrendingUp, LayoutGrid, ArrowRight, RefreshCw, ChevronDown, Check } from 'lucide-react';
+import { DateRangeFilter, DateRange } from '@/components/DateRangeFilter';
 import {
   AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line,
@@ -145,6 +146,11 @@ export default function DashboardPage() {
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
   const [perfPeriod, setPerfPeriod] = useState<PerfPeriod>('daily');
   const [refreshing, setRefreshing] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | null>(() => {
+    const to = new Date().toISOString().slice(0, 10);
+    const from = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+    return { from, to };
+  });
   const { data: stats, loading, error } = useDashboardStats();
   const logs = stats?.recentLogs;
 
@@ -190,22 +196,26 @@ export default function DashboardPage() {
     ].filter(d => d.value > 0);
   }, [stats, filteredCampaigns, isFiltered]);
 
-  // Daily claims area chart — sum selected campaign performance columns
+  // Daily claims area chart — sum selected campaign performance columns, then filter by date range
   const dailyClaims = useMemo(() => {
     if (!stats) return [];
-    if (!isFiltered) return stats.dailyClaims;
-    if (!stats.dailyPerformance?.length) return [];
-    const names = filteredCampaigns.map(c => c.fullName);
-    return stats.dailyPerformance.map(row => ({
-      date: row.date as string,
-      count: names.reduce((s, n) => s + ((row[n] as number) || 0), 0),
-    }));
-  }, [stats, filteredCampaigns, isFiltered]);
+    let rows = !isFiltered ? stats.dailyClaims : (() => {
+      if (!stats.dailyPerformance?.length) return [];
+      const names = filteredCampaigns.map(c => c.fullName);
+      return stats.dailyPerformance.map(row => ({
+        date: row.date as string,
+        count: names.reduce((s, n) => s + ((row[n] as number) || 0), 0),
+      }));
+    })();
+    if (dateRange) rows = rows.filter(r => r.date >= dateRange.from && r.date <= dateRange.to);
+    return rows;
+  }, [stats, filteredCampaigns, isFiltered, dateRange]);
 
-  // Performance chart — filter to selected campaign lines
+  // Performance chart — filter to selected campaign lines, then filter by date range
   const perfData = useMemo(() => {
     if (!stats?.dailyPerformance) return [];
-    const raw = perfPeriod === 'weekly' ? toWeekly(stats.dailyPerformance) : stats.dailyPerformance;
+    let raw = perfPeriod === 'weekly' ? toWeekly(stats.dailyPerformance) : stats.dailyPerformance;
+    if (dateRange) raw = raw.filter(r => (r.date as string) >= dateRange.from && (r.date as string) <= dateRange.to);
     if (!isFiltered) return raw;
     const names = filteredCampaigns.map(c => c.fullName);
     return raw.map(row => {
@@ -213,7 +223,7 @@ export default function DashboardPage() {
       names.forEach(n => { filtered[n] = (row[n] as number) ?? 0; });
       return filtered;
     });
-  }, [stats, filteredCampaigns, isFiltered, perfPeriod]);
+  }, [stats, filteredCampaigns, isFiltered, perfPeriod, dateRange]);
 
   // Campaign line keys to render
   const perfKeys = useMemo(() => {
@@ -242,7 +252,8 @@ export default function DashboardPage() {
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
           <MultiCampaignSelect
             campaigns={stats?.byCampaign ?? []}
             selected={selectedCampaigns}
@@ -289,7 +300,9 @@ export default function DashboardPage() {
 
         <Card className="lg:col-span-2 border-border/60">
           <CardHeader className="pb-1 pt-4 px-5">
-            <CardTitle className="text-sm font-semibold">Daily Claims — Last 30 Days</CardTitle>
+            <CardTitle className="text-sm font-semibold">
+              Daily Claims{dateRange ? ` — ${dateRange.from} → ${dateRange.to}` : ' — All Time'}
+            </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-4">
             {loading ? <Skeleton className="h-[220px] rounded-xl" />

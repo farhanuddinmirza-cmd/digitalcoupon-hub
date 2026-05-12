@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
 
 function AccessDenied() {
   return (
@@ -30,11 +30,18 @@ function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: stri
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<StoredUser | null>(null);
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
 
   const [formName, setFormName] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formPassword, setFormPassword] = useState('');
   const [formRole, setFormRole] = useState<UserRole>('viewer');
+
+  const toggleReveal = (id: string) =>
+    setRevealedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  // Roles the current user is allowed to assign
+  const allowedRoles: UserRole[] = isAdmin ? ['admin', 'ops', 'viewer'] : ['ops', 'viewer'];
 
   const openCreate = () => {
     setEditingUser(null);
@@ -111,6 +118,7 @@ function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: stri
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              {isAdmin && <TableHead>Password</TableHead>}
               <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -123,6 +131,18 @@ function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: stri
                 <TableCell>
                   <Badge className={`${roleBadgeClass[u.role]} capitalize text-xs`}>{u.role}</Badge>
                 </TableCell>
+                {isAdmin && (
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-mono text-muted-foreground">
+                        {revealedIds.has(u.id) ? u.password : '••••••••'}
+                      </span>
+                      <button onClick={() => toggleReveal(u.id)} className="text-muted-foreground hover:text-foreground transition-colors">
+                        {revealedIds.has(u.id) ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
+                  </TableCell>
+                )}
                 <TableCell className="text-sm text-muted-foreground">{u.createdAt}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
@@ -138,7 +158,7 @@ function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: stri
             ))}
             {users.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={isAdmin ? 6 : 5} className="text-center text-muted-foreground py-8">
                   No users found. Create one to get started.
                 </TableCell>
               </TableRow>
@@ -173,9 +193,9 @@ function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: stri
               <Select value={formRole} onValueChange={v => setFormRole(v as UserRole)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="ops">Ops</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
+                  {allowedRoles.map(r => (
+                    <SelectItem key={r} value={r} className="capitalize">{r.charAt(0).toUpperCase() + r.slice(1)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
