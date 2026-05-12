@@ -151,7 +151,7 @@ export default function DashboardPage() {
     const from = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
     return { from, to };
   });
-  const { data: stats, loading, error } = useDashboardStats();
+  const { data: stats, loading, error } = useDashboardStats(dateRange);
   const logs = stats?.recentLogs;
 
   const handleRefresh = async () => {
@@ -300,9 +300,7 @@ export default function DashboardPage() {
 
         <Card className="lg:col-span-2 border-border/60">
           <CardHeader className="pb-1 pt-4 px-5">
-            <CardTitle className="text-sm font-semibold">
-              Daily Claims{dateRange ? ` — ${dateRange.from} → ${dateRange.to}` : ' — All Time'}
-            </CardTitle>
+            <CardTitle className="text-sm font-semibold">Daily Claims Trend</CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-4">
             {loading ? <Skeleton className="h-[220px] rounded-xl" />
@@ -407,25 +405,36 @@ export default function DashboardPage() {
 
         <Card className="border-border/60">
           <CardHeader className="pb-1 pt-4 px-5 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-semibold">Campaign Summary</CardTitle>
+            <CardTitle className="text-sm font-semibold">Campaign Performance</CardTitle>
             <Button asChild variant="ghost" size="sm" className="text-xs h-7 gap-1 text-muted-foreground">
-              <Link to="/campaigns">View all <ArrowRight className="h-3 w-3" /></Link>
+              <Link to="/campaigns">Details <ArrowRight className="h-3 w-3" /></Link>
             </Button>
           </CardHeader>
           <CardContent className="px-5 pb-4">
             {loading
-              ? <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-9 rounded-lg" />)}</div>
+              ? <div className="space-y-4">{[1,2,3,4].map(i => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
               : !filteredCampaigns.length
                 ? <p className="text-sm text-muted-foreground py-6 text-center">No campaigns</p>
-                : filteredCampaigns.slice(0, 6).map((c, i, arr) => (
-                  <div key={c.id} className={`flex items-center justify-between py-3 ${i < arr.length - 1 ? 'border-b border-border/40' : ''}`}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Badge className={`text-[10px] px-1.5 py-0 shrink-0 ${STATUS_COLORS[c.status] ?? ''}`}>{c.status}</Badge>
-                      <span className="text-sm text-foreground truncate">{c.fullName}</span>
+                : filteredCampaigns.map((c, i, arr) => (
+                  <div key={c.id} className={`py-3 ${i < arr.length - 1 ? 'border-b border-border/40' : ''}`}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Badge className={`text-[10px] px-1.5 py-0 shrink-0 ${STATUS_COLORS[c.status] ?? ''}`}>{c.status}</Badge>
+                        <span className="text-sm font-medium text-foreground truncate">{c.fullName}</span>
+                      </div>
+                      <span className="text-sm font-bold text-primary shrink-0 ml-2">{c.rate}%</span>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0 ml-3">
-                      <span className="text-xs text-muted-foreground tabular-nums">{c.claimed}/{c.total}</span>
-                      <span className="text-xs font-bold text-primary tabular-nums w-10 text-right">{c.rate}%</span>
+                    <div className="w-full bg-muted rounded-full h-1.5 mb-1.5">
+                      <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${Math.min(c.rate, 100)}%` }} />
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                      <span><span className="font-medium text-foreground">{c.total.toLocaleString()}</span> entries</span>
+                      <span>·</span>
+                      <span><span className="font-medium text-foreground">{c.claimed.toLocaleString()}</span> coupons issued</span>
+                      {c.pdfCount > 0 && <>
+                        <span>·</span>
+                        <span><span className="font-medium text-foreground">{c.pdfCount.toLocaleString()}</span> PDFs</span>
+                      </>}
                     </div>
                   </div>
                 ))

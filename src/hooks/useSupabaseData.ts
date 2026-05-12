@@ -17,21 +17,29 @@ async function qCount(
   sinceDate?: string,
   sinceCol?: string,
   countType: 'exact' | 'planned' | 'estimated' = 'exact',
+  toDate?: string,
 ): Promise<number> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q = (supabase.from(table) as any).select('*', { count: countType, head: true });
   if (notNullCol) q = q.not(notNullCol, 'is', null);
   if (sinceDate && sinceCol) q = q.gte(sinceCol, sinceDate);
+  if (toDate && sinceCol) q = q.lte(sinceCol, toDate);
   const { count, error } = await q;
   if (error) throw new Error(`${table}: ${error.message}`);
   return (count ?? 0) as number;
 }
 
-async function qCountWhere(table: string, col: string, val: string | boolean): Promise<number> {
+async function qCountWhere(
+  table: string, col: string, val: string | boolean,
+  fromDate?: string, toDate?: string, dateCol?: string,
+): Promise<number> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { count, error } = await (supabase.from(table) as any)
+  let q = (supabase.from(table) as any)
     .select('*', { count: 'exact', head: true })
     .eq(col, val);
+  if (fromDate && dateCol) q = q.gte(dateCol, fromDate);
+  if (toDate && dateCol) q = q.lte(dateCol, toDate);
+  const { count, error } = await q;
   if (error) return 0;
   return (count ?? 0) as number;
 }
@@ -44,11 +52,13 @@ async function qRows(
   sinceCol?: string,
   orderCol?: string,
   lim?: number,
+  toDate?: string,
 ): Promise<Record<string, unknown>[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q = (supabase.from(table) as any).select(select);
   if (notNullCol) q = q.not(notNullCol, 'is', null);
   if (sinceDate && sinceCol) q = q.gte(sinceCol, sinceDate);
+  if (toDate && sinceCol) q = q.lte(sinceCol, toDate);
   if (orderCol) q = q.order(orderCol, { ascending: false });
   if (lim) q = q.limit(lim);
   const { data, error } = await q;
@@ -56,7 +66,7 @@ async function qRows(
   return (data ?? []) as Record<string, unknown>[];
 }
 
-// Per-campaign stats: total rows, claimed count, active-in-last-7-days
+// Per-campaign stats: total rows, claimed count, active-in-date-range
 type CampStats = { total: number; claimed: number; active: boolean; pdfCount: number };
 
 async function fetchCampStats(
@@ -66,15 +76,17 @@ async function fetchCampStats(
   pdfCol?: string,
   allEntriesAreCoupon?: boolean,
   totalCountType: 'exact' | 'planned' | 'estimated' = 'exact',
+  fromDate?: string,
+  toDate?: string,
 ): Promise<CampStats> {
   const s7 = daysAgo(7);
   const [total, claimedRaw, recent, pdfCount] = await Promise.all([
-    qCount(table, undefined, undefined, undefined, totalCountType),
-    hasCoupon ? qCount(table, 'coupon_code') : Promise.resolve(0),
+    qCount(table, undefined, fromDate, dateCol, totalCountType, toDate),
+    hasCoupon ? qCount(table, 'coupon_code', fromDate, dateCol, 'exact', toDate) : Promise.resolve(0),
     hasCoupon
-      ? qCount(table, 'coupon_code', s7, dateCol)
-      : qCount(table, undefined, s7, dateCol),
-    pdfCol ? qCountWhere(table, pdfCol, true) : Promise.resolve(0),
+      ? qCount(table, 'coupon_code', fromDate ?? s7, dateCol, 'exact', toDate)
+      : qCount(table, undefined, fromDate ?? s7, dateCol, 'exact', toDate),
+    pdfCol ? qCountWhere(table, pdfCol, true, fromDate, toDate, dateCol) : Promise.resolve(0),
   ]);
   const claimed = allEntriesAreCoupon ? total : claimedRaw;
   return { total, claimed, active: recent > 0, pdfCount };
@@ -248,22 +260,44 @@ export function useActivityLogs(campaignId?: string, limit = 500) {
 
 // ── Dashboard Stats ────────────────────────────────────────────────────────────
 
-export function useDashboardStats() {
-  // Campaign stats (shares cache with useCampaigns)
-  const hs = useQuery({ queryKey: ['stats', 'Holiday Songs'], queryFn: () => fetchCampStats('Holiday Songs', true, 'updated_at', 'pdf'), staleTime: STALE });
-  const s  = useQuery({ queryKey: ['stats', 'songs'],         queryFn: () => fetchCampStats('songs',         true, 'updated_at', undefined, false, 'exact'), staleTime: STALE });
-  const u  = useQuery({ queryKey: ['stats', 'uploads'],       queryFn: () => fetchCampStats('uploads',       false, 'created_at'), staleTime: STALE });
-  const p  = useQuery({ queryKey: ['stats', 'Poses'],         queryFn: () => fetchCampStats('Poses',         false, 'created_at', undefined, true), staleTime: STALE });
+export function useDashboardStats(dateRange?: { from: string; to: string } | null) {
+  const fromDate = dateRange?.from;
+  const toDate   = dateRange?.to;
+  const isRanged = !!(fromDate || toDate);
 
-  // Last-30-day rows for trend charts (only timestamps + coupon column)
+  // When ranged use separate keys so React Query refetches; when all-time share cache with useCampaigns
+  const hs = useQuery({
+    queryKey: isRanged ? ['stats-d', 'Holiday Songs', fromDate, toDate] : ['stats', 'Holiday Songs'],
+    queryFn: () => fetchCampStats('Holiday Songs', true, 'updated_at', 'pdf', false, 'exact', fromDate, toDate),
+    staleTime: STALE,
+  });
+  const s = useQuery({
+    queryKey: isRanged ? ['stats-d', 'songs', fromDate, toDate] : ['stats', 'songs'],
+    queryFn: () => fetchCampStats('songs', false, 'updated_at', undefined, false, 'exact', fromDate, toDate),
+    staleTime: STALE,
+  });
+  const u = useQuery({
+    queryKey: isRanged ? ['stats-d', 'uploads', fromDate, toDate] : ['stats', 'uploads'],
+    queryFn: () => fetchCampStats('uploads', false, 'created_at', undefined, false, 'exact', fromDate, toDate),
+    staleTime: STALE,
+  });
+  const p = useQuery({
+    queryKey: isRanged ? ['stats-d', 'Poses', fromDate, toDate] : ['stats', 'Poses'],
+    queryFn: () => fetchCampStats('Poses', false, 'created_at', undefined, true, 'exact', fromDate, toDate),
+    staleTime: STALE,
+  });
+
+  // Trend rows for charts — use date range when provided, else last 30 days
+  const trendFrom = fromDate ?? daysAgo(30);
+  const trendTo   = toDate;
   const hsTrend = useQuery({
-    queryKey: ['trend', 'Holiday Songs', 'last30'],
-    queryFn: () => qRows('Holiday Songs', 'updated_at', 'coupon_code', daysAgo(30), 'updated_at', 'updated_at', 5000),
+    queryKey: ['trend', 'Holiday Songs', trendFrom, trendTo ?? 'now'],
+    queryFn: () => qRows('Holiday Songs', 'updated_at', 'coupon_code', trendFrom, 'updated_at', 'updated_at', 5000, trendTo),
     staleTime: STALE,
   });
   const sTrend = useQuery({
-    queryKey: ['trend', 'songs', 'last30'],
-    queryFn: () => qRows('songs', 'updated_at', 'coupon_code', daysAgo(30), 'updated_at', 'updated_at', 5000),
+    queryKey: ['trend', 'songs', trendFrom, trendTo ?? 'now'],
+    queryFn: () => qRows('songs', 'updated_at', 'coupon_code', trendFrom, 'updated_at', 'updated_at', 5000, trendTo),
     staleTime: STALE,
   });
 
