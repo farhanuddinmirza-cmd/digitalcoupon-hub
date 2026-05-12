@@ -18,6 +18,11 @@ export interface Campaign {
   startDate: string;
   endDate: string;
   status: 'active' | 'completed' | 'draft';
+  totalEntries?: number;
+  withCoupon?: number;
+  hasCouponColumn?: boolean;
+  couponPerEntry?: boolean;   // all entries count as coupons (e.g. Poses)
+  pdfCount?: number;          // PDF downloads tracked via a column
 }
 
 export type CouponStatus = 'uploaded' | 'claimed' | 'voided';
