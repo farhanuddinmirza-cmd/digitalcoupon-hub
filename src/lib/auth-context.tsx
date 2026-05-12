@@ -3,6 +3,7 @@ import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { UserRole, hasPermission } from './types';
 import { mockUsers } from './mock-data';
+import { findByCredentials } from './user-store';
 
 export interface AuthUser {
   id: string;
@@ -86,27 +87,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error: sbError } = await supabase.auth.signInWithPassword({ email, password });
     if (!sbError) return { error: null };
 
-    // Try MongoDB users (created via User Management)
-    try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      if (res.ok) {
-        const dbUser = await res.json();
-        const authUser: AuthUser = {
-          id: String(dbUser._id),
-          email: dbUser.email,
-          name: dbUser.name,
-          role: (dbUser.role as UserRole) ?? 'viewer',
-        };
-        setUser(authUser);
-        localStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(authUser));
-        return { error: null };
-      }
-    } catch {
-      // network error — fall through to mock check
+    // Check users created via User Management (stored in localStorage)
+    const storedUser = findByCredentials(email, password);
+    if (storedUser) {
+      const authUser: AuthUser = { id: storedUser.id, email: storedUser.email, name: storedUser.name, role: storedUser.role };
+      setUser(authUser);
+      localStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(authUser));
+      return { error: null };
     }
 
     // Fall back to hardcoded mock credentials (demo mode)

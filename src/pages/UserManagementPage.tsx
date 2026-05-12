@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { useFetch } from '@/hooks/useApi';
-import { User, UserRole } from '@/lib/types';
+import { UserRole } from '@/lib/types';
+import { StoredUser, getUsers, getUsersByCreator, addUser, updateUser, deleteUser } from '@/lib/user-store';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,25 +18,19 @@ function AccessDenied() {
       <div className="text-4xl">🔒</div>
       <h1 className="text-xl font-semibold text-foreground">Access Denied</h1>
       <p className="text-muted-foreground max-w-sm">
-        Only administrators can access user management. Please contact an admin if you need to manage users.
+        You don't have permission to access user management.
       </p>
     </div>
   );
 }
 
 function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: string; isAdmin: boolean }) {
-  const apiUrl = isAdmin ? '/api/users' : `/api/users?createdBy=${currentUserId}`;
-  const { data: fetchedUsers, loading } = useFetch<User[]>(apiUrl);
-  const [users, setUsers] = useState<User[]>([]);
+  const loadUsers = () => isAdmin ? getUsers() : getUsersByCreator(currentUserId);
+  const [users, setUsers] = useState<StoredUser[]>(loadUsers);
   const [dialogOpen, setDialogOpen] = useState(false);
-
-  useEffect(() => {
-    if (fetchedUsers) setUsers(fetchedUsers);
-  }, [fetchedUsers]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<StoredUser | null>(null);
 
-  // Form state
   const [formName, setFormName] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formPassword, setFormPassword] = useState('');
@@ -51,40 +45,43 @@ function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: stri
     setDialogOpen(true);
   };
 
-  const openEdit = (user: User) => {
+  const openEdit = (user: StoredUser) => {
     setEditingUser(user);
     setFormName(user.name);
     setFormEmail(user.email);
-    setFormPassword(user.password || '');
+    setFormPassword(user.password);
     setFormRole(user.role);
     setDialogOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!formName.trim() || !formEmail.trim()) return;
+  const handleSave = () => {
+    if (!formName.trim() || !formEmail.trim() || !formPassword.trim()) return;
     if (editingUser) {
-      const updates = { _id: (editingUser as any)._id, name: formName.trim(), email: formEmail.trim(), role: formRole, ...(formPassword.trim() ? { password: formPassword.trim() } : {}) };
-      const res = await fetch('/api/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
-      if (res.ok) {
-        setUsers(prev => prev.map(u => (u as any)._id === (editingUser as any)._id ? { ...u, ...updates } : u));
-      }
+      updateUser(editingUser.id, {
+        name: formName.trim(),
+        email: formEmail.trim(),
+        password: formPassword.trim(),
+        role: formRole,
+      });
     } else {
-      const newUser = { name: formName.trim(), email: formEmail.trim(), password: formPassword.trim() || undefined, role: formRole, enabled: true, createdAt: new Date().toISOString().split('T')[0], createdBy: currentUserId };
-      const res = await fetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newUser) });
-      if (res.ok) {
-        const created = await res.json();
-        setUsers(prev => [...prev, created]);
-      }
+      addUser({
+        name: formName.trim(),
+        email: formEmail.trim(),
+        password: formPassword.trim(),
+        role: formRole,
+        enabled: true,
+        createdAt: new Date().toISOString().split('T')[0],
+        createdBy: currentUserId,
+      });
     }
+    setUsers(loadUsers());
     setDialogOpen(false);
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (deleteId) {
-      const res = await fetch(`/api/users?id=${deleteId}`, { method: 'DELETE' });
-      if (res.ok) {
-        setUsers(prev => prev.filter(u => (u as any)._id !== deleteId && u.id !== deleteId));
-      }
+      deleteUser(deleteId);
+      setUsers(loadUsers());
       setDeleteId(null);
     }
   };
@@ -94,15 +91,6 @@ function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: stri
     ops: 'bg-accent text-accent-foreground',
     viewer: 'bg-secondary text-secondary-foreground',
   };
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-foreground">User Management</h1>
-        <p className="text-muted-foreground">Loading users...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -123,23 +111,25 @@ function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: stri
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.map(u => (
-              <TableRow key={(u as any)._id || u.id}>
+              <TableRow key={u.id}>
                 <TableCell className="font-medium text-foreground">{u.name}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
                 <TableCell>
                   <Badge className={`${roleBadgeClass[u.role]} capitalize text-xs`}>{u.role}</Badge>
                 </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{u.createdAt}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteId((u as any)._id || u.id)}>
+                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(u.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -148,8 +138,8 @@ function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: stri
             ))}
             {users.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                  No users found.
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  No users found. Create one to get started.
                 </TableCell>
               </TableRow>
             )}
@@ -157,7 +147,6 @@ function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: stri
         </Table>
       </div>
 
-      {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -193,14 +182,13 @@ function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: stri
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={!formName.trim() || !formEmail.trim()}>
+            <Button onClick={handleSave} disabled={!formName.trim() || !formEmail.trim() || !formPassword.trim()}>
               {editingUser ? 'Save Changes' : 'Create User'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -219,12 +207,10 @@ function UserManagementContent({ currentUserId, isAdmin }: { currentUserId: stri
 
 export default function UserManagementPage() {
   const { user, can } = useAuth();
-  const canManage = can('manage_users');
 
-  if (!canManage) {
+  if (!can('manage_users')) {
     return <AccessDenied />;
   }
 
-  const isAdmin = user?.role === 'admin';
-  return <UserManagementContent currentUserId={user?.id ?? ''} isAdmin={isAdmin} />;
+  return <UserManagementContent currentUserId={user?.id ?? ''} isAdmin={user?.role === 'admin'} />;
 }
