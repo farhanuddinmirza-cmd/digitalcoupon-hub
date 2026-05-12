@@ -86,7 +86,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error: sbError } = await supabase.auth.signInWithPassword({ email, password });
     if (!sbError) return { error: null };
 
-    // Fall back to mock credentials (demo mode)
+    // Try MongoDB users (created via User Management)
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (res.ok) {
+        const dbUser = await res.json();
+        const authUser: AuthUser = {
+          id: String(dbUser._id),
+          email: dbUser.email,
+          name: dbUser.name,
+          role: (dbUser.role as UserRole) ?? 'viewer',
+        };
+        setUser(authUser);
+        localStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(authUser));
+        return { error: null };
+      }
+    } catch {
+      // network error — fall through to mock check
+    }
+
+    // Fall back to hardcoded mock credentials (demo mode)
     const mockUser = mockUsers.find(u => u.email === email && u.password === password && u.enabled);
     if (mockUser) {
       const authUser: AuthUser = { id: mockUser.id, email: mockUser.email, name: mockUser.name, role: mockUser.role };
