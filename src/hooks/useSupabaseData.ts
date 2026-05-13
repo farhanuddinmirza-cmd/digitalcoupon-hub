@@ -86,7 +86,7 @@ async function fetchCampStats(
     hasCoupon
       ? qCount(table, 'coupon_code', fromDate ?? s7, dateCol, 'exact', toDate)
       : qCount(table, undefined, fromDate ?? s7, dateCol, 'exact', toDate),
-    pdfCol ? qCountWhere(table, pdfCol, true, fromDate, toDate, dateCol) : Promise.resolve(0),
+    pdfCol ? qCountWhere(table, pdfCol, 'true', fromDate, toDate, dateCol) : Promise.resolve(0),
   ]);
   const claimed = allEntriesAreCoupon ? total : claimedRaw;
   return { total, claimed, active: recent > 0, pdfCount };
