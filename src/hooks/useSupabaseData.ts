@@ -273,7 +273,7 @@ export function useDashboardStats(dateRange?: { from: string; to: string } | nul
   });
   const s = useQuery({
     queryKey: isRanged ? ['stats-d', 'songs', fromDate, toDate] : ['stats', 'songs'],
-    queryFn: () => fetchCampStats('songs', false, 'updated_at', undefined, false, 'exact', fromDate, toDate),
+    queryFn: () => fetchCampStats('songs', true, 'updated_at', undefined, false, 'exact', fromDate, toDate),
     staleTime: STALE,
   });
   const u = useQuery({
